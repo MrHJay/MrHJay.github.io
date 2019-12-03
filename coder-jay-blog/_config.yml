@@ -1,0 +1,32 @@
+title: Coder Jay-Blog
+description: "Coder Jay's persional blog"
+author:
+  name: "Coder Jay"
+  email: "hejiedhj@.163.com"
+  url: "https://jay-dh.github.io/"
+
+baseurl: /blog
+
+source: .
+destination: ../blog
+permalink: /:title
+paginate: 4
+paginate_path: /page/:num/
+
+defaults:
+  -
+    scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+
+future: true
+plugins:
+  - jekyll-seo-tag
+  - jekyll-paginate
+  - jekyll-sitemap
+
+# Custom variables
+owner : "Coder-Jay"
+year : "2019"

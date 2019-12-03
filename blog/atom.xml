@@ -3,8 +3,8 @@
   <channel>
     <title>Coder Jay-Blog</title>
     <description>Coder Jay's persional blog</description>
-    <link>http://localhost:4000</link>
-    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
+    <link></link>
+    <atom:link href="/feed.xml" rel="self" type="application/rss+xml" />
     <author>
       <name>Coder Jay</name>
       <email>hejiedhj@.163.com</email>
@@ -16,9 +16,9 @@
         <description>
 </description>
         <pubDate>Tue, 03 Dec 2019 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000//sample-blog</link>
-        <link href="http://localhost:4000/sample-blog"/>
-        <guid isPermaLink="true">http://localhost:4000/sample-blog</guid>
+        <link>//sample-blog</link>
+        <link href="/sample-blog"/>
+        <guid isPermaLink="true">/sample-blog</guid>
       </item>
     
       <item>
@@ -188,9 +188,9 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 </description>
         <pubDate>Sat, 06 Jan 2018 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000//Yet-Another-Sample-Page</link>
-        <link href="http://localhost:4000/Yet-Another-Sample-Page"/>
-        <guid isPermaLink="true">http://localhost:4000/Yet-Another-Sample-Page</guid>
+        <link>//Yet-Another-Sample-Page</link>
+        <link href="/Yet-Another-Sample-Page"/>
+        <guid isPermaLink="true">/Yet-Another-Sample-Page</guid>
       </item>
     
       <item>
@@ -360,9 +360,9 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 </description>
         <pubDate>Tue, 12 Dec 2017 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000//Sample-Page</link>
-        <link href="http://localhost:4000/Sample-Page"/>
-        <guid isPermaLink="true">http://localhost:4000/Sample-Page</guid>
+        <link>//Sample-Page</link>
+        <link href="/Sample-Page"/>
+        <guid isPermaLink="true">/Sample-Page</guid>
       </item>
     
       <item>
@@ -532,9 +532,9 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 </description>
         <pubDate>Mon, 11 Dec 2017 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000//One-More-Sample-Page</link>
-        <link href="http://localhost:4000/One-More-Sample-Page"/>
-        <guid isPermaLink="true">http://localhost:4000/One-More-Sample-Page</guid>
+        <link>//One-More-Sample-Page</link>
+        <link href="/One-More-Sample-Page"/>
+        <guid isPermaLink="true">/One-More-Sample-Page</guid>
       </item>
     
       <item>
@@ -704,9 +704,9 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 </description>
         <pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000//Another-Sample-Page</link>
-        <link href="http://localhost:4000/Another-Sample-Page"/>
-        <guid isPermaLink="true">http://localhost:4000/Another-Sample-Page</guid>
+        <link>//Another-Sample-Page</link>
+        <link href="/Another-Sample-Page"/>
+        <guid isPermaLink="true">/Another-Sample-Page</guid>
       </item>
     
   </channel>
