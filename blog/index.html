@@ -17,10 +17,11 @@
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Coder Jay’s persional blog" />
 <meta property="og:description" content="Coder Jay’s persional blog" />
+<link rel="canonical" href="http://localhost:4000/blog/" />
+<meta property="og:url" content="http://localhost:4000/blog/" />
 <meta property="og:site_name" content="Coder Jay-Blog" />
-<link rel="next" href="/blog/page/2/" />
 <script type="application/ld+json">
-{"@type":"WebSite","headline":"Coder Jay-Blog","url":"/blog/","name":"Coder Jay-Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional blog","@context":"https://schema.org"}</script>
+{"@type":"WebSite","headline":"Coder Jay-Blog","url":"http://localhost:4000/blog/","name":"Coder Jay-Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional blog","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 </head>
@@ -45,28 +46,26 @@
         <ul>
     
       <li>
-          <h2><a href="/blog/sample-blog">First Blog of Jay</a></h2>
-          <time datetime="2019-12-03T00:00:00+08:00">03 Dec 2019</time>
-          <p>
+          <h2><a href="/blog/reverse-engineering-asm">汇编语言简述</a></h2>
+          <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
+          <p>汇编的基本概念
+
+arm汇编
+
+x86_64汇编
 </p>
       </li>
     
       <li>
-          <h2><a href="/blog/Yet-Another-Sample-Page">Yet Another Sample Page</a></h2>
-          <time datetime="2018-01-06T00:00:00+08:00">06 Jan 2018</time>
-          <p>Text can be bold, italic, strikethrough or keyword. Link to another page. There should be whitespace between paragraphs. There should be whitespace between paragraphs. We recommend including a README, or a file with information about your project. Header 1 This is a normal paragraph following a header. GitHub is a...</p>
+          <h2><a href="/blog/reverse-engineering-android">Java语言的逆向(Android APP)</a></h2>
+          <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
+          <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。 静态分析 将APK反编译成比较方便理解的代码（如smali、Java代码等），进行静态分析，了解代码的流程和设计逻辑。 将APK反编译成smali代码 apktool d QQMusic72282.apk 反编译出如下文件： 将APK反编译成Jar包 unzip -d ./QQMusic72282-unzip QQMusic72282.apk # 解压APK cd ./QQMusic72282-unzip d2j-dex2jar.sh classes.dex #...</p>
       </li>
     
       <li>
-          <h2><a href="/blog/Sample-Page">Sample Page</a></h2>
-          <time datetime="2017-12-12T00:00:00+08:00">12 Dec 2017</time>
-          <p>Text can be bold, italic, strikethrough or keyword. Link to another page. There should be whitespace between paragraphs. There should be whitespace between paragraphs. We recommend including a README, or a file with information about your project. Header 1 This is a normal paragraph following a header. GitHub is a...</p>
-      </li>
-    
-      <li>
-          <h2><a href="/blog/One-More-Sample-Page">One More Sample Page</a></h2>
-          <time datetime="2017-12-11T00:00:00+08:00">11 Dec 2017</time>
-          <p>Text can be bold, italic, strikethrough or keyword. Link to another page. There should be whitespace between paragraphs. There should be whitespace between paragraphs. We recommend including a README, or a file with information about your project. Header 1 This is a normal paragraph following a header. GitHub is a...</p>
+          <h2><a href="/blog/reverse-engineering-summary">逆向工程简述</a></h2>
+          <time datetime="2020-01-27T00:00:00+08:00">27 Jan 2020</time>
+          <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅 前言 本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。 本文仅作为学习交流，请勿用作非法用途。 什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。 本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse engineer的脚步。 汇编语言之于逆向工程 掌握汇编语言是学会逆向的充分必要条件，汇编语言基本上是最接近机器代码的编程语音了，基本上所有的逆向工具都是先将二进制文件反汇编成汇编代码，供给逆向工程师分析（Java语言也是类似，可以认为smali代码是面向JVM的机器代码）。 在分析汇编语言时，会比较枯燥，我们往往不需要一行一行的仔细去分析，只需要关注一些关键的代码即可，理出代码片段的大致思路然后再着重分析关键代码即可； 也可以借助工具（如IDA Pro，Hopper Disassembler），将汇编代码转换成C的伪代码，这样分析起来效率会更高。 逆向工具 IDA Pro：逆向工程师的灵魂，功能强大，自行体会。...</p>
       </li>
     
 </ul>
@@ -75,25 +74,13 @@
     </div>
   </div>
 
-  
-  <div class="pagination">
-    
-    <span class="page-item">&laquo;</span>
-      
-    <span class="page-item">1</span>
-      
-    <a href="/blog/page/2/" class="page-item">2</a>
-      
-    <a href="/blog/page/2/" class="page-item">&raquo;</a>
-    
-  </div>
    <footer>
   <a href="https://creativecommons.org/licenses/by-nc/3.0/deed.en_US">
     <span>
         <b>Coder-Jay</b>
     </span>
     
-    <span>© 2019</span>
+    <span>© 2020</span>
   </a>
 </footer>
 

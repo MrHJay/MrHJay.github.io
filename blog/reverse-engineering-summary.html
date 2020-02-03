@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <meta name="generator" content="Jekyll">
+
+  <title>逆向工程简述</title>
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  
+  <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>逆向工程简述 | Coder Jay-Blog</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="逆向工程简述" />
+<meta name="author" content="Coder Jay" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="从一个逆向小白的正向工程师转向逆向工程的学习之旅" />
+<meta property="og:description" content="从一个逆向小白的正向工程师转向逆向工程的学习之旅" />
+<link rel="canonical" href="http://localhost:4000/blog/reverse-engineering-summary" />
+<meta property="og:url" content="http://localhost:4000/blog/reverse-engineering-summary" />
+<meta property="og:site_name" content="Coder Jay-Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-01-27T00:00:00+08:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"逆向工程简述","dateModified":"2020-01-27T00:00:00+08:00","datePublished":"2020-01-27T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/reverse-engineering-summary"},"url":"http://localhost:4000/blog/reverse-engineering-summary","author":{"@type":"Person","name":"Coder Jay"},"description":"从一个逆向小白的正向工程师转向逆向工程的学习之旅","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+<body>
+  <div id="wrapper">
+    <header>
+  <div>
+    <a href="/blog/">
+    
+    <h1>coder-jay@home:~$</h1>
+    </a>
+    <div class="header-links">
+      <a href="/blog/archive"><h2 class="header-link">Archive</h2></a>
+<a href="/blog/about"><h2 class="header-link">About</h2></a>
+<a href="/blog/atom.xml"><h2 class="header-link">RSS</h2></a>
+    </div>
+  </div>
+</header>
+    <div class="container">
+      <section id="main_content">
+        <article>
+  <h2>逆向工程简述</h2>
+  <time datetime="2020-01-27T00:00:00+08:00" class="by-line">27 Jan 2020</time>
+  <blockquote>
+  <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅</p>
+</blockquote>
+
+<h2 id="前言">前言</h2>
+
+<p><strong>本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。</strong></p>
+
+<p><strong>本文仅作为学习交流，请勿用作非法用途。</strong></p>
+
+<p>什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。</p>
+
+<p>本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse engineer的脚步。</p>
+
+<h2 id="汇编语言之于逆向工程">汇编语言之于逆向工程</h2>
+
+<p>掌握汇编语言是学会逆向的充分必要条件，汇编语言基本上是最接近机器代码的编程语音了，基本上所有的逆向工具都是先将二进制文件反汇编成汇编代码，供给逆向工程师分析（Java语言也是类似，可以认为smali代码是面向JVM的机器代码）。</p>
+
+<p>在分析汇编语言时，会比较枯燥，我们往往不需要一行一行的仔细去分析，只需要关注一些关键的代码即可，理出代码片段的大致思路然后再着重分析关键代码即可； 也可以借助工具（如IDA Pro，Hopper Disassembler），将汇编代码转换成C的伪代码，这样分析起来效率会更高。</p>
+
+<h2 id="逆向工具">逆向工具</h2>
+
+<ul>
+  <li>IDA Pro：逆向工程师的灵魂，功能强大，自行体会。</li>
+  <li>Hopper Disassembler：功能和IDA类似，不如IDA强大，但价格比IDA便宜太多，对objective-c支持更友好。</li>
+  <li><a href="https://ibotpeaches.github.io/Apktool/">apktool</a>：Android APK反编译工具。</li>
+  <li><a href="https://github.com/DexPatcher/dex2jar">dex2jar</a>：dex文件转jar工具。</li>
+  <li><a href="http://java-decompiler.github.io/">JD-GUI</a>：直接jar反编译成Java代码浏览。</li>
+  <li>Android Studio：smali代码浏览，Android APK断点debug。</li>
+  <li>Charles/Flidder、Wireshark：网络抓包工具。</li>
+  <li>UltraEdit: 查看、修改二进制文件等。</li>
+</ul>
+
+<h2 id="逆向的分类">逆向的分类</h2>
+
+<p>逆向工程按照编程语言类别，可以分为:</p>
+
+<ul>
+  <li>解释型语言的逆向(如Android APP)</li>
+  <li>编译型语言的逆向(如C/C++、Objective-C)</li>
+</ul>
+
+<p><code class="highlighter-rouge">解释型语言</code>(如Java)的运行环境是JVM之类的虚拟机，其反编译的难度通常较低。以Java语言为例，编译器编译的结果通常是<em>.class</em>或者<em>.dex</em>文件，在没有做代码混淆的情况下，很容易反汇编出Java源码，分析出代码逻辑。而且混淆也只是将类、方法、变量名称替换成<em>a</em> <em>b</em> <em>c</em> <em>d</em>这种没有任何意义的名字，增加理解难度而已。</p>
+
+<p><code class="highlighter-rouge">编译型语言</code>(如C/C++，Objective-C等)最终编译出来的机器代码就比较复杂，因为其机器代码是跟CPU架构相关的，因此针对不同的CPU架构编译出来的二进制文件是不同的，反汇编得到的代码也会不一样。往往需要针对特定的CPU架构去解读汇编语言，才能正确的分析出结果出来，这就需要对不同架构CPU的寄存器、寻址方式等特性有所了解才行。另外二进制文件反汇编出来的函数、变量名通常是机器生成的无意义字符串，所以分析难度通常相较于解释型语言会更大一些。</p>
+
+<h2 id="分析手段">分析手段</h2>
+
+<blockquote>
+  <p>常用的分析手段有以下三种：</p>
+</blockquote>
+
+<ol>
+  <li>静态分析</li>
+  <li>动态分析</li>
+  <li>网络流量分析</li>
+</ol>
+
+<p>在做逆向的时候，通常需要根据需要被分析的程序特点，选择一种或者多种手段结合使用，来达到最佳效果。</p>
+
+<h3 id="静态分析">静态分析</h3>
+
+<p>将机器代码反汇编成方便人类理解的代码，如smali代码（Java）、汇编代码或汇编代码翻译的C语言伪代码等等，通过分析这些比较低级的编程语言的代码，找到程序的业务流程或设计逻辑。</p>
+
+<h3 id="动态分析">动态分析</h3>
+
+<p>通过断点调试手段，让程序单步执行进行分析。动态分析往往是在静态分析出一定的结果的基础上进行，找到合适的地方给代码打断点，即时地读取当前变量的值，来进一步分析程序的逻辑、获取程序关系数据。</p>
+
+<h3 id="网络流量分析">网络流量分析</h3>
+
+<p>通过代理方式或者其他方式，截取程序与服务器通信的数据流量（抓包），来分析客户端和服务端的通信协议。网络流量分析比较有局限性，若客户端使用<em>Http</em>这种明文传输的协议，会比较容易分析；但如果客户端使用SSL、<em>Https</em>等加密传输协议与服务端进行通信，那么抓包的前提是需要拿到服务端下发给客户端的证书才能进一步解密分析，这种情况下就比较棘手。网上有方案通过安装插件拿到Chrome或者Firefox浏览器的本地证书，但只适用于客户端是网页的情况。若其他大佬有好的宝贵经验，还望能指点迷津。</p>
+
+<hr />
+
+<h2 id="详细章节">详细章节</h2>
+
+<ul>
+  <li><a href="reverse-engineering-android">Java语言的逆向(Android APP)</a></li>
+  <li><a href="reverse-engineering-asm">汇编语言简述</a></li>
+  <li><a href="reverse-engineering-oc">Objective-C语言的逆向</a></li>
+  <li><a href="reverse-engineering-c_cxx">C/C++二进制逆向</a></li>
+</ul>
+
+</article>
+      </section>
+    </div>
+  </div>
+
+   <footer>
+  <a href="https://creativecommons.org/licenses/by-nc/3.0/deed.en_US">
+    <span>
+        <b>Coder-Jay</b>
+    </span>
+    
+    <span>© 2020</span>
+  </a>
+</footer>
+
+  
+</body>
+
+</html>
