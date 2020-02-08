@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
   <meta name="generator" content="Jekyll">
 
-  <title>Coder Jay-Blog</title>
+  <title>Coder Jay's Blog</title>
 
   <link rel="stylesheet" href="/blog/css/main.css">
   
   <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>Coder Jay-Blog | Coder Jay’s persional blog</title>
+<title>Coder Jay’s Blog | Coder Jay’s persional tech blog</title>
 <meta name="generator" content="Jekyll v4.0.0" />
-<meta property="og:title" content="Coder Jay-Blog" />
+<meta property="og:title" content="Coder Jay’s Blog" />
 <meta name="author" content="Coder Jay" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Coder Jay’s persional blog" />
-<meta property="og:description" content="Coder Jay’s persional blog" />
-<meta property="og:site_name" content="Coder Jay-Blog" />
+<meta name="description" content="Coder Jay’s persional tech blog" />
+<meta property="og:description" content="Coder Jay’s persional tech blog" />
+<meta property="og:site_name" content="Coder Jay’s Blog" />
 <script type="application/ld+json">
-{"@type":"WebSite","headline":"Coder Jay-Blog","url":"/blog/","name":"Coder Jay-Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional blog","@context":"https://schema.org"}</script>
+{"@type":"WebSite","headline":"Coder Jay’s Blog","url":"/blog/","name":"Coder Jay’s Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional tech blog","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 </head>
@@ -44,26 +44,27 @@
         <ul>
     
       <li>
-          <h2><a href="/blog/reverse-engineering-asm">汇编语言简述</a></h2>
+          <h2><a href="/blog/reverse-engineering-asm">汇编语言简述(逆向工程)</a></h2>
           <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
-          <p>汇编的基本概念
-
-arm汇编
-
-x86_64汇编
-</p>
+          <p>在逆向分析C/C++等编译型语言时，汇编是一项必备的功能，掌握简单汇编知识是十分有必要的。 一些基本概念 汇编语音是面向机器的程序设计语音，使用助记符代替操作CPU指令的机器码，所以汇编语言也称之为符号语言。 不同于C/C++、Java等高级语言，汇编语言操作的对象是CPU、寄存器、内存。 通俗来讲，在汇编语言的里，执行一个指令的一般流程是： 将需要操作的内容写入寄存器 执行对应的机器指令，让CPU运算结果 从寄存器读取结果的值 寄存器 要了解汇编，首先需要知道，什么是寄存器。...</p>
       </li>
     
       <li>
           <h2><a href="/blog/reverse-engineering-android">Java语言的逆向(Android APP)</a></h2>
           <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
-          <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。 静态分析 将APK反编译成比较方便理解的代码（如smali、Java代码等），进行静态分析，了解代码的流程和设计逻辑。 将APK反编译成smali代码 apktool d QQMusic72282.apk 反编译出如下文件： 将APK反编译成Jar包 unzip -d ./QQMusic72282-unzip QQMusic72282.apk # 解压APK cd ./QQMusic72282-unzip d2j-dex2jar.sh classes.dex #...</p>
+          <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。 静态分析 将APK反编译成比较方便理解的代码（如smali、Java代码等），进行静态分析，了解代码的流程和设计逻辑。 将APK反编译成smali代码 apktool d QQMusic72282.apk 反编译出如下文件： 将APK反编译成Jar包 unzip...</p>
       </li>
     
       <li>
-          <h2><a href="/blog/reverse-engineering-summary">逆向工程简述</a></h2>
+          <h2><a href="/blog/reverse-engineering-summary">逆向工程入门简述</a></h2>
           <time datetime="2020-01-27T00:00:00+08:00">27 Jan 2020</time>
-          <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅 前言 本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。 本文仅作为学习交流，请勿用作非法用途。 什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。 本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse engineer的脚步。 汇编语言之于逆向工程 掌握汇编语言是学会逆向的充分必要条件，汇编语言基本上是最接近机器代码的编程语音了，基本上所有的逆向工具都是先将二进制文件反汇编成汇编代码，供给逆向工程师分析（Java语言也是类似，可以认为smali代码是面向JVM的机器代码）。 在分析汇编语言时，会比较枯燥，我们往往不需要一行一行的仔细去分析，只需要关注一些关键的代码即可，理出代码片段的大致思路然后再着重分析关键代码即可； 也可以借助工具（如IDA Pro，Hopper Disassembler），将汇编代码转换成C的伪代码，这样分析起来效率会更高。 逆向工具 IDA Pro：逆向工程师的灵魂，功能强大，自行体会。...</p>
+          <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅 前言 本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。 本文仅作为学习交流，请勿用作非法用途。 什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。 本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse...</p>
+      </li>
+    
+      <li>
+          <h2><a href="/blog/Sample-Page">Sample Page</a></h2>
+          <time datetime="2017-12-12T00:00:00+08:00">12 Dec 2017</time>
+          <p>Text can be bold, italic, strikethrough or keyword. Link to...</p>
       </li>
     
 </ul>

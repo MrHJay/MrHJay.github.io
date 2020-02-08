@@ -5,23 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
   <meta name="generator" content="Jekyll">
 
-  <title>汇编语言简述</title>
+  <title>汇编语言简述(逆向工程)</title>
 
   <link rel="stylesheet" href="/blog/css/main.css">
   
   <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>汇编语言简述 | Coder Jay-Blog</title>
+<title>汇编语言简述(逆向工程) | Coder Jay’s Blog</title>
 <meta name="generator" content="Jekyll v4.0.0" />
-<meta property="og:title" content="汇编语言简述" />
+<meta property="og:title" content="汇编语言简述(逆向工程)" />
 <meta name="author" content="Coder Jay" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="汇编的基本概念" />
-<meta property="og:description" content="汇编的基本概念" />
-<meta property="og:site_name" content="Coder Jay-Blog" />
+<meta name="description" content="逆向工程入门，汇编语言简述" />
+<meta property="og:description" content="逆向工程入门，汇编语言简述" />
+<meta property="og:site_name" content="Coder Jay’s Blog" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-01-28T00:00:00+08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","headline":"汇编语言简述","dateModified":"2020-01-28T00:00:00+08:00","datePublished":"2020-01-28T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/blog/reverse-engineering-asm"},"url":"/blog/reverse-engineering-asm","author":{"@type":"Person","name":"Coder Jay"},"description":"汇编的基本概念","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","headline":"汇编语言简述(逆向工程)","dateModified":"2020-01-28T00:00:00+08:00","datePublished":"2020-01-28T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/blog/reverse-engineering-asm"},"url":"/blog/reverse-engineering-asm","author":{"@type":"Person","name":"Coder Jay"},"description":"逆向工程入门，汇编语言简述","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 </head>
@@ -44,13 +44,685 @@
     <div class="container">
       <section id="main_content">
         <article>
-  <h2>汇编语言简述</h2>
+  <h2>汇编语言简述(逆向工程)</h2>
   <time datetime="2020-01-28T00:00:00+08:00" class="by-line">28 Jan 2020</time>
-  <h1 id="汇编的基本概念">汇编的基本概念</h1>
+  <p>在逆向分析C/C++等编译型语言时，汇编是一项必备的功能，掌握简单汇编知识是十分有必要的。</p>
 
-<h1 id="arm汇编">arm汇编</h1>
+<h2 id="一些基本概念">一些基本概念</h2>
 
-<h1 id="x86_64汇编">x86_64汇编</h1>
+<p>汇编语音是面向机器的程序设计语音，使用助记符代替操作CPU指令的机器码，所以汇编语言也称之为符号语言。 不同于C/C++、Java等高级语言，汇编语言操作的对象是CPU、寄存器、内存。 通俗来讲，在汇编语言的里，执行一个指令的一般流程是：</p>
+
+<ul>
+  <li>将需要操作的内容写入寄存器</li>
+  <li>执行对应的机器指令，让CPU运算结果</li>
+  <li>从寄存器读取结果的值</li>
+</ul>
+
+<h3 id="寄存器">寄存器</h3>
+
+<p>要了解汇编，首先需要知道，什么是寄存器。 寄存器是CPU里的高速缓冲区，学过计算机原理的同学应该都知道，CPU的运算速度是极快的，而内存的读写速度远远跟不上CPU的运算速度的，根据木桶定律，计算机的整体效率受限于内存的读写速度。因此，为了提高效率，人们想到在CPU和内存之间增加一个高速缓存（很多CPU还分一级缓存、二级缓存甚至是三级缓存）。 高速缓存的读写速度比内存快得多，而高速缓存的作用就是预先将内存中需要运算的数据写入高速缓存中，等到CPU可以执行机器指令的时候，就可以直接从速度较快的高速缓存中读取，而不是从读写代价较高的内存中读，从而，提高了计算机的整体运行效率。</p>
+
+<p>因此，在编写汇编代码的时候，需要先将数据写入到寄存器中，CPU才能做进一步的操作，而寄存器又分为：</p>
+
+<ul>
+  <li>通用寄存器</li>
+  <li>指针和变址寄存器，指针寄存器又分为：基址指针寄存器、堆栈指针寄存器等</li>
+  <li>段寄存器</li>
+  <li>指令指针寄存器（PC）</li>
+  <li>标志寄存器</li>
+</ul>
+
+<p>我们在做逆向分析过程中，关注最多的一般是通用寄存器、堆栈指针寄存器、标志寄存器等，下文会详细说明。</p>
+
+<h3 id="大端小端">大端小端</h3>
+
+<p>做逆向分析的时候，经常需要通过动态分析手段来读取内存中的数据，将内存中的数据对应到代码中的变量上，值得一提的是，内存中数据存储的顺序是需要我们注意的。我们都知道，计算机里存储数据的最小单位是byte，即字节，内存也不例外。我们逆向分析得到的内存数据是以字节为单位的数据。一个字节是8-bit（位），而代码中的基本数据类型有8-bit、16-bit、32-bit、64-bit等等，这些长度大于一个byte的数据类型在内存中是以怎样的顺序进行存储的呢？这就涉及到大小端模式的问题了。</p>
+
+<ul>
+  <li>大端模式：是指数据的高字节保存在内存的低地址中，而数据的低字节保存在内存的高地址中。</li>
+  <li>小端模式：是指数据的高字节保存在内存的高地址中，而数据的低字节保存在内存的低地址中。</li>
+</ul>
+
+<p>以32位的整形数据为例，字节的排列顺序如下：
+<img src="./assets/rve-asm/memory-endian-struct.jpg" alt="arm cprs" /></p>
+
+<p>PowerPC架构的CPU中一般是大端模式，x86、arm架构的CPU普遍采用小端模式。</p>
+
+<h3 id="栈和堆">栈和堆</h3>
+
+<p>栈和堆是学汇编需要了解的两个概念，栈和堆是汇编使用内存时的两种划分，它们都是内存上的存储数据的空间。</p>
+
+<p>栈：大家都知道，栈是一种数据结构，数据按照先进后出的方式进行存储，汇编里也是如此，但一般只用于保存函数内的局部变量。在调用一个函数的时候，先预留足够数量的栈空间，供函数内部使用，在函数结束时，又需要移动栈指针空间，使之与进入函数前的地址保持一致，即所谓的<code class="highlighter-rouge">栈平衡</code>。</p>
+
+<p>堆：堆也是用于存放变量的，但不同于栈但是，栈用于保存申明方式定义的局部变量，而堆用于保存<code class="highlighter-rouge">alloc</code>或<code class="highlighter-rouge">new</code>方式申请的变量。由于是运行时才使用内存空间，就导致编译器无法知道你需要多大的空间，所以在C/C++里这种方式申请的内存需要自己手动释放。</p>
+
+<p><img src="./assets/rve-asm/asm-stack-heap.jpg" alt="stack heap" /></p>
+
+<p>值得注意的是，堆内存是从低地址往高地址使用内存空间的，而栈是从高地址往低地址使用内存空间。这就是为什么我们经常看到函数的开头会有一句 <code class="highlighter-rouge">SUB SP 0x20</code>这种移动SP指针下移的代码，哦！原来是在准备栈空间给函数内部的局部变量使用；而在函数末尾又会<code class="highlighter-rouge">ADD SP 0x20</code>去还原栈指针，保持栈平衡。</p>
+
+<p>这里大家可以思考一下，我们写递归函数时，如果遇到死循环抛出异常，为什么叫StackOverflow异常？就是因为死循环调用函数时，会一直移动SP下移，最终栈内存会和堆内存相遇，这时候就是我们遇到的栈内存溢出异常了。</p>
+
+<h3 id="汇编语言的特点">汇编语言的特点</h3>
+
+<p>由于汇编是最接近机器代码的程序设计语言，因此有很多特性不同于我们熟悉的高级语言：</p>
+
+<ul>
+  <li>没有申请、释放内存的概念，对内存操作没有限制，拿到内存地址就读写。不同于C/C++等语言里，局部变量的内存的分配和释放都是编译器在编译的时候完成的。</li>
+  <li>没有函数、方法等概念，高级语言中所有的函数、方法对应到汇编语言中都是一个个代码片段。而在汇编里实现高级语言的函数调用是：
+    <ul>
+      <li>保存当前代码地址的下一个指令地址 <code class="highlighter-rouge">addr_a</code></li>
+      <li>转跳到代码片段 <code class="highlighter-rouge">fun_a</code>的地址 <code class="highlighter-rouge">addr_b</code></li>
+      <li>代码片段 <code class="highlighter-rouge">fun_a</code>执行完后，转跳到地址 <code class="highlighter-rouge">addr_a</code></li>
+    </ul>
+  </li>
+</ul>
+
+<p>以上，在自己实战积累后，会有更深入的理解和感悟。</p>
+
+<h3 id="cpu的分类">CPU的分类</h3>
+
+<p>由上面的描述的内容可知，汇编语言操作的对象是CPU、是硬件，但CPU的架构分多种，常见的架构有 <code class="highlighter-rouge">x86</code>、<code class="highlighter-rouge">ARM</code>、<code class="highlighter-rouge">MIPS</code>等。个人计算机主要以 <code class="highlighter-rouge">x86</code>系列架构为主；手机、平板等移动设备则以 <code class="highlighter-rouge">ARM</code>系列架构为主，下文将围绕这两种架构来分别描述汇编语言。</p>
+
+<h2 id="arm汇编">ARM汇编</h2>
+
+<p>ARM架构又分为32位架构和64位架构，目前市面上的手机基本都是64位的，而64位是向下兼容32位的。大部分应用开发商（特别是Android）在使用C/C++混合编码时，为了兼容旧设备，在编译时都会保留32位的编译选项，所以本文将以32位的ARM为例来分析汇编。</p>
+
+<h3 id="arm寄存器">ARM寄存器</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">#</th>
+      <th style="text-align: left">别名</th>
+      <th style="text-align: left">用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">R0</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R1</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R2</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R3</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R4</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R5</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R6</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R7</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">一般存放系统调用号</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R8</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R9</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R10</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">通用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R11</td>
+      <td style="text-align: left">FP</td>
+      <td style="text-align: left">栈帧指针寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R12</td>
+      <td style="text-align: left">IP</td>
+      <td style="text-align: left">程序内部调用寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R13</td>
+      <td style="text-align: left">SP</td>
+      <td style="text-align: left">栈指针寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R14</td>
+      <td style="text-align: left">LR</td>
+      <td style="text-align: left">程序链接寄存器，一般存放函数的返回地址</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">R15</td>
+      <td style="text-align: left">PC</td>
+      <td style="text-align: left">程序计数寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">CPSR</td>
+      <td style="text-align: left">-</td>
+      <td style="text-align: left">状态寄存器</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>在函数调用中，参数通用寄存器R0 ～ R3传递，超过4个的参数剩余参数，压入栈中，通过栈传参，函数的返回值存入R0寄存器中。</p>
+
+<p><strong>CPSR</strong>（Current Program Status Register）：当前程序状态寄存器，用于存放上一次指令执行的状态，按位表示状态，即每一位表示了不同的状态。</p>
+
+<p><img src="./assets/rve-asm/arm-cpsr-info.jpg" alt="arm cprs" /></p>
+
+<ul>
+  <li>CPSR的低8位称为控制位，程序无法修改（除非CPU处于特权模式）。</li>
+  <li><code class="highlighter-rouge">N</code> <code class="highlighter-rouge">Z</code> <code class="highlighter-rouge">C</code> <code class="highlighter-rouge">V</code> 为条件码标志位，它们的值受逻辑运算或算术运算的结果而改变。</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Bits</th>
+      <th style="text-align: left">Flag</th>
+      <th style="text-align: left">Desciption</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">[31]</td>
+      <td style="text-align: left">N(Negative)</td>
+      <td style="text-align: left">指令执行结果为负数时置1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[30]</td>
+      <td style="text-align: left">Z(Zero)</td>
+      <td style="text-align: left">指令执行结果为0时置1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[29]</td>
+      <td style="text-align: left">C(Carry)</td>
+      <td style="text-align: left">对于加法有进位则置1，对于减法有借位则置0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[28]</td>
+      <td style="text-align: left">V(Overflow)</td>
+      <td style="text-align: left">指令结果不能用32位的二进制补码存储，即发生了溢出时置1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[24]</td>
+      <td style="text-align: left">J(Jazelle)</td>
+      <td style="text-align: left">允许ARM处理器去以硬件执行java字节码的状态标志</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[9]</td>
+      <td style="text-align: left">E(Endian)</td>
+      <td style="text-align: left">小端序置0，大端序置1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[5]</td>
+      <td style="text-align: left">T(Thumb)</td>
+      <td style="text-align: left">当为Thumb模式时置1，ARM模式置0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[4:0]</td>
+      <td style="text-align: left">M(Mode)</td>
+      <td style="text-align: left">当前的权限模式（用户态，内核态）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="常见指令">常见指令</h3>
+
+<p>在做逆向分析阅读汇编代码时，我们不需要详细理解每一句汇编代码的作用，很多时候都是跳跃式的阅读，掌握关键的汇编代码逻辑即可。汇编的指令比较多，我们也并不需要全部记住，掌握一些常见的指令就能理解大部分的汇编代码，遇到其他不常用指令实在是需要理解，再去查找手册就行了。</p>
+
+<p>下面列举一些常见的汇编指令：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Name</th>
+      <th style="text-align: left">Description</th>
+      <th style="text-align: left">Name</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">MOV</td>
+      <td style="text-align: left">移动数据</td>
+      <td style="text-align: left">EOR</td>
+      <td style="text-align: left">异或运算</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ADD</td>
+      <td style="text-align: left">加法运算</td>
+      <td style="text-align: left">LDR</td>
+      <td style="text-align: left">加载数据</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">SUB</td>
+      <td style="text-align: left">减法运算</td>
+      <td style="text-align: left">STR</td>
+      <td style="text-align: left">存储数据</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">MUL</td>
+      <td style="text-align: left">乘法运算</td>
+      <td style="text-align: left">LDM</td>
+      <td style="text-align: left">多次加载数据</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">LSL</td>
+      <td style="text-align: left">逻辑左移</td>
+      <td style="text-align: left">STM</td>
+      <td style="text-align: left">多次存储数据</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">LSR</td>
+      <td style="text-align: left">逻辑右移</td>
+      <td style="text-align: left">PUSH</td>
+      <td style="text-align: left">数据入栈</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ASR</td>
+      <td style="text-align: left">算术右移</td>
+      <td style="text-align: left">POP</td>
+      <td style="text-align: left">数据出栈</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ROR</td>
+      <td style="text-align: left">循环右移</td>
+      <td style="text-align: left">B</td>
+      <td style="text-align: left">分支转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">CMP</td>
+      <td style="text-align: left">数据比较</td>
+      <td style="text-align: left">BL</td>
+      <td style="text-align: left">链接(保存当前地址用于返回)分支转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">AND</td>
+      <td style="text-align: left">与运算</td>
+      <td style="text-align: left">BX</td>
+      <td style="text-align: left">分支转跳切换(条件切换Thumb模式)</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ORR</td>
+      <td style="text-align: left">或运算</td>
+      <td style="text-align: left">BLX</td>
+      <td style="text-align: left">链接分支转跳切换</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="实战分析">实战分析</h3>
+
+<p>下面我们来分析一小段简单的汇编代码。</p>
+
+<h4 id="c语言源码">C语言源码</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">fun_A</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">c</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>一个简单的加法函数<code class="highlighter-rouge">fun_A</code>，通过IDA反汇编得到对应的汇编代码</p>
+
+<div class="language-nasm highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">var_14</span>          <span class="o">=</span> <span class="o">-</span><span class="mh">0x14</span>
+<span class="n">var_10</span>          <span class="o">=</span> <span class="o">-</span><span class="mh">0x10</span>
+<span class="n">var_C</span>           <span class="o">=</span> <span class="o">-</span><span class="mh">0xC</span>
+<span class="n">var_8</span>           <span class="o">=</span> <span class="o">-</span><span class="mi">8</span>
+<span class="n">var_4</span>           <span class="o">=</span> <span class="o">-</span><span class="mi">4</span>
+
+<span class="c">; __unwind {</span>
+<span class="k">SUB</span>             <span class="n">SP</span><span class="p">,</span> <span class="n">SP</span><span class="p">,</span> <span class="err">#</span><span class="mh">0x14</span>           <span class="c">; 申请栈空间，20 byte</span>
+<span class="k">MOV</span>             <span class="n">R2</span><span class="p">,</span> <span class="n">R1</span>                  <span class="c">; 参数b</span>
+<span class="k">MOV</span>             <span class="n">R3</span><span class="p">,</span> <span class="n">R0</span>                  <span class="c">; 参数a</span>
+<span class="k">STR</span>             <span class="n">R0</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_4</span><span class="err">]</span>    <span class="c">; 保存a到栈</span>
+<span class="k">STR</span>             <span class="n">R1</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_8</span><span class="err">]</span>    <span class="c">; 保存b到栈</span>
+<span class="n">LDR</span>             <span class="n">R0</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_4</span><span class="err">]</span>    <span class="c">; 读取a</span>
+<span class="n">LDR</span>             <span class="n">R1</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_8</span><span class="err">]</span>    <span class="c">; 读取b</span>
+<span class="k">ADD</span>             <span class="n">R0</span><span class="p">,</span> <span class="n">R1</span>                  <span class="c">; a + b</span>
+<span class="k">STR</span>             <span class="n">R0</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_C</span><span class="err">]</span>    <span class="c">; 结果c保存到栈</span>
+<span class="n">LDR</span>             <span class="n">R0</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_C</span><span class="err">]</span>    <span class="c">; 读取c</span>
+<span class="k">STR</span>             <span class="n">R2</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_10</span><span class="err">]</span>   <span class="c">;</span>
+<span class="k">STR</span>             <span class="n">R3</span><span class="p">,</span> <span class="err">[</span><span class="n">SP</span><span class="p">,</span><span class="err">#</span><span class="mh">0x14</span><span class="o">+</span><span class="n">var_14</span><span class="err">]</span>   <span class="c">;</span>
+<span class="k">ADD</span>             <span class="n">SP</span><span class="p">,</span> <span class="n">SP</span><span class="p">,</span> <span class="err">#</span><span class="mh">0x14</span>           <span class="c">; 还原栈空间</span>
+<span class="n">BX</span>              <span class="n">LR</span>                      <span class="c">; 返回到调用地址</span>
+<span class="c">; }</span>
+</code></pre></div></div>
+
+<p>可以看到，一段C代码被编译器汇编之后得到到汇编代码，代码可划分为以下几个部分：</p>
+
+<ul>
+  <li>申请栈空间</li>
+  <li>保存参数到栈中</li>
+  <li>真正关键的代码逻辑</li>
+  <li>恢复栈空间，保持栈平衡</li>
+  <li>返回</li>
+</ul>
+
+<p>因此我们在看到一段函数代码的时候，开头的申请栈空间、保存参数以及末尾的恢复栈空间、返回的代码可以直接跳过，直接分析中间的逻辑代码。另外可以看到，由编译器编译得到的汇编代码会有很多冗余的部分，毕竟是机器翻译，逆向分析的时候不用太过深究，直接跳过即可。</p>
+
+<h2 id="x86汇编">x86汇编</h2>
+
+<p><strong>x86与ARM汇编相比，语法上稍微有些不同，但分析汇编的代码思路都是一致的，这里介绍一下x86汇编的基本要点和硬件上的不同之处。</strong></p>
+
+<p>x86架构也分32位架构和64位架构，目前市面上的个人电脑普遍是64位，向下兼容32位，下面以64位的x86_64为例分析。</p>
+
+<h3 id="x86_64寄存器">x86_64寄存器</h3>
+
+<h4 id="16个通用寄存器">16个通用寄存器</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">#</th>
+      <th style="text-align: left">用途</th>
+      <th style="text-align: left">#</th>
+      <th style="text-align: left">用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">RAX</td>
+      <td style="text-align: left">通常作为函数返回值</td>
+      <td style="text-align: left">R8</td>
+      <td style="text-align: left">通常用作参数5</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RBX</td>
+      <td style="text-align: left">被调用者保护的寄存器，或用作基指针</td>
+      <td style="text-align: left">R9</td>
+      <td style="text-align: left">通常用作参数6</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RCX</td>
+      <td style="text-align: left">通常用作参数4</td>
+      <td style="text-align: left">R10</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RDX</td>
+      <td style="text-align: left">通常用作参数3</td>
+      <td style="text-align: left">R11</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RSI</td>
+      <td style="text-align: left">通常用作参数2</td>
+      <td style="text-align: left">R12</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RDI</td>
+      <td style="text-align: left">通常用作参数1</td>
+      <td style="text-align: left">R13</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RBP</td>
+      <td style="text-align: left">被调用者保护的寄存器，或用作帧指针</td>
+      <td style="text-align: left">R14</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RSP</td>
+      <td style="text-align: left">栈指针寄存器，指向栈顶</td>
+      <td style="text-align: left">R15</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>通用寄存器还经常可以看到只使用32位、16位、高8位、低8位的用法，但仅限于 <code class="highlighter-rouge">RAX</code>、<code class="highlighter-rouge">RBX</code>、<code class="highlighter-rouge">RCX</code>、<code class="highlighter-rouge">RDX</code>这几个寄存器。以RAX寄存器为例，对应用法的数据结构如下图所示：</p>
+
+<p><img src="./assets/rve-asm/x86_64-register-compat.jpg" alt="x86_64 register compat" /></p>
+
+<h4 id="eflags状态寄存器">EFLAGS(状态寄存器)</h4>
+
+<p>x86及x86_64同样也有自己的状态寄存器，存放当前的程序状态标志。</p>
+
+<p><strong>状态标志位</strong>：用于指示算术指令（如<code class="highlighter-rouge">ADD</code>、<code class="highlighter-rouge">SUB</code>、<code class="highlighter-rouge">MUL</code>等）的运算结果</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Bits</th>
+      <th style="text-align: left">Flag</th>
+      <th style="text-align: left">Desciption</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">[0]</td>
+      <td style="text-align: left">CF(Carry Flag)</td>
+      <td style="text-align: left">对于算术运算有进位或借位则置1，反之则置0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[2]</td>
+      <td style="text-align: left">PF(Partiy Flag)</td>
+      <td style="text-align: left">运算结果最低有效字节包含偶数个1则置1，反之则置0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[4]</td>
+      <td style="text-align: left">AF(Adjust Flag)</td>
+      <td style="text-align: left"> </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[6]</td>
+      <td style="text-align: left">ZF(Zero Flag)</td>
+      <td style="text-align: left">运算结果为0则置1，反之置0</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[7]</td>
+      <td style="text-align: left">SF(Sign Flag)</td>
+      <td style="text-align: left">运算结果为正则置0，负数置1</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">[11]</td>
+      <td style="text-align: left">OF(Overflow Flag)</td>
+      <td style="text-align: left">结果是较大的正数或较小的负数，并且无法匹配目的操作数（即结果溢出）时将该位置1，反之则置0</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>控制标志位</strong>：控制串指令(MOVS, CMPS, SCAS, LODS以及STOS)。设置DF标志使得串指令自动递减（从高地址向低地址方向处理字符串），清除该标志则使得串指令自动递增。STD以及CLD指令分别用于设置以及清除DF标志。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Bits</th>
+      <th style="text-align: left">Flag</th>
+      <th style="text-align: left">Desciption</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">[10]</td>
+      <td style="text-align: left">DF(Direction Flag)</td>
+      <td style="text-align: left">置1时串指令自动递减（从高地址向低地址方向处理字符串），置0时则使得串指令自动递增</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="16个向量寄存器">16个向量寄存器</h4>
+
+<p>用于向量运算</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">#</th>
+      <th style="text-align: left">用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">XMM0-XMM1</td>
+      <td style="text-align: left">用来传递和返回浮点参数</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">XMM2-XMM7</td>
+      <td style="text-align: left">用来传递浮点参数</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">XMM8-XMM15</td>
+      <td style="text-align: left">临时寄存器</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="常用指令">常用指令</h3>
+
+<p>与ARM汇编类似，这里列举一些常见的指令，用于基本的逆向分析：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Name</th>
+      <th style="text-align: left">Description</th>
+      <th style="text-align: left">Name</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">MOV</td>
+      <td style="text-align: left">移动数据</td>
+      <td style="text-align: left">INTO</td>
+      <td style="text-align: left">溢出中断指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">PUSH</td>
+      <td style="text-align: left">数据入栈</td>
+      <td style="text-align: left">SHL</td>
+      <td style="text-align: left">逻辑左移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">POP</td>
+      <td style="text-align: left">数据出栈</td>
+      <td style="text-align: left">SHR</td>
+      <td style="text-align: left">逻辑右移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ADD</td>
+      <td style="text-align: left">加法运算</td>
+      <td style="text-align: left">SAL</td>
+      <td style="text-align: left">算术左移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">SUB</td>
+      <td style="text-align: left">减法运算</td>
+      <td style="text-align: left">SAR</td>
+      <td style="text-align: left">算术右移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">INC</td>
+      <td style="text-align: left">操作数加1</td>
+      <td style="text-align: left">ROL</td>
+      <td style="text-align: left">循环左移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">DEC</td>
+      <td style="text-align: left">操作数减1</td>
+      <td style="text-align: left">ROR</td>
+      <td style="text-align: left">循环右移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">ADC</td>
+      <td style="text-align: left">多字节加法，带进位(CF)做加法</td>
+      <td style="text-align: left">RCL</td>
+      <td style="text-align: left">带进位循环左移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">SBB</td>
+      <td style="text-align: left">多字节减法，带借位(CF)做减法</td>
+      <td style="text-align: left">RCR</td>
+      <td style="text-align: left">带进位循环右移</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">CMP</td>
+      <td style="text-align: left">数据比较，只改变标志寄存器</td>
+      <td style="text-align: left">LEA</td>
+      <td style="text-align: left">取偏移地址指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">AND</td>
+      <td style="text-align: left">逻辑与</td>
+      <td style="text-align: left">JMP</td>
+      <td style="text-align: left">转移指令</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">OR</td>
+      <td style="text-align: left">逻辑或</td>
+      <td style="text-align: left">JE</td>
+      <td style="text-align: left">等于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">XOR</td>
+      <td style="text-align: left">逻辑异或</td>
+      <td style="text-align: left">JNE</td>
+      <td style="text-align: left">不等于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">NOT</td>
+      <td style="text-align: left">逻辑非</td>
+      <td style="text-align: left">JG</td>
+      <td style="text-align: left">大于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">TEST</td>
+      <td style="text-align: left">逻辑与运算类似，但只改变标记寄存器</td>
+      <td style="text-align: left">JGE</td>
+      <td style="text-align: left">大于等于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">CALL</td>
+      <td style="text-align: left">子程序调用指令</td>
+      <td style="text-align: left">JL</td>
+      <td style="text-align: left">小于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">RET</td>
+      <td style="text-align: left">返回指令</td>
+      <td style="text-align: left">JLE</td>
+      <td style="text-align: left">小于等于则转跳</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">INT</td>
+      <td style="text-align: left">中断指令</td>
+      <td style="text-align: left"> </td>
+      <td style="text-align: left"> </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://azeria-labs.com/arm-data-types-and-registers-part-2">Azeria Libs(ARM Data Types And Registers)</a></li>
+</ul>
 
 </article>
       </section>

@@ -1,6 +1,7 @@
 ---
 title: Java语言的逆向(Android APP)
 published: true
+description: Java语言逆向(Android APP)的入门技巧
 ---
 
 Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。

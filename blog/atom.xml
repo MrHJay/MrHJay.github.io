@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Coder Jay-Blog</title>
-    <description>Coder Jay's persional blog</description>
+    <title>Coder Jay's Blog</title>
+    <description>Coder Jay's persional tech blog</description>
     <link></link>
     <atom:link href="/feed.xml" rel="self" type="application/rss+xml" />
     <author>
@@ -12,12 +12,684 @@
     </author>
     
       <item>
-        <title>汇编语言简述</title>
-        <description>&lt;h1 id=&quot;汇编的基本概念&quot;&gt;汇编的基本概念&lt;/h1&gt;
+        <title>汇编语言简述(逆向工程)</title>
+        <description>&lt;p&gt;在逆向分析C/C++等编译型语言时，汇编是一项必备的功能，掌握简单汇编知识是十分有必要的。&lt;/p&gt;
 
-&lt;h1 id=&quot;arm汇编&quot;&gt;arm汇编&lt;/h1&gt;
+&lt;h2 id=&quot;一些基本概念&quot;&gt;一些基本概念&lt;/h2&gt;
 
-&lt;h1 id=&quot;x86_64汇编&quot;&gt;x86_64汇编&lt;/h1&gt;
+&lt;p&gt;汇编语音是面向机器的程序设计语音，使用助记符代替操作CPU指令的机器码，所以汇编语言也称之为符号语言。 不同于C/C++、Java等高级语言，汇编语言操作的对象是CPU、寄存器、内存。 通俗来讲，在汇编语言的里，执行一个指令的一般流程是：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;将需要操作的内容写入寄存器&lt;/li&gt;
+  &lt;li&gt;执行对应的机器指令，让CPU运算结果&lt;/li&gt;
+  &lt;li&gt;从寄存器读取结果的值&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;寄存器&quot;&gt;寄存器&lt;/h3&gt;
+
+&lt;p&gt;要了解汇编，首先需要知道，什么是寄存器。 寄存器是CPU里的高速缓冲区，学过计算机原理的同学应该都知道，CPU的运算速度是极快的，而内存的读写速度远远跟不上CPU的运算速度的，根据木桶定律，计算机的整体效率受限于内存的读写速度。因此，为了提高效率，人们想到在CPU和内存之间增加一个高速缓存（很多CPU还分一级缓存、二级缓存甚至是三级缓存）。 高速缓存的读写速度比内存快得多，而高速缓存的作用就是预先将内存中需要运算的数据写入高速缓存中，等到CPU可以执行机器指令的时候，就可以直接从速度较快的高速缓存中读取，而不是从读写代价较高的内存中读，从而，提高了计算机的整体运行效率。&lt;/p&gt;
+
+&lt;p&gt;因此，在编写汇编代码的时候，需要先将数据写入到寄存器中，CPU才能做进一步的操作，而寄存器又分为：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;通用寄存器&lt;/li&gt;
+  &lt;li&gt;指针和变址寄存器，指针寄存器又分为：基址指针寄存器、堆栈指针寄存器等&lt;/li&gt;
+  &lt;li&gt;段寄存器&lt;/li&gt;
+  &lt;li&gt;指令指针寄存器（PC）&lt;/li&gt;
+  &lt;li&gt;标志寄存器&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;我们在做逆向分析过程中，关注最多的一般是通用寄存器、堆栈指针寄存器、标志寄存器等，下文会详细说明。&lt;/p&gt;
+
+&lt;h3 id=&quot;大端小端&quot;&gt;大端小端&lt;/h3&gt;
+
+&lt;p&gt;做逆向分析的时候，经常需要通过动态分析手段来读取内存中的数据，将内存中的数据对应到代码中的变量上，值得一提的是，内存中数据存储的顺序是需要我们注意的。我们都知道，计算机里存储数据的最小单位是byte，即字节，内存也不例外。我们逆向分析得到的内存数据是以字节为单位的数据。一个字节是8-bit（位），而代码中的基本数据类型有8-bit、16-bit、32-bit、64-bit等等，这些长度大于一个byte的数据类型在内存中是以怎样的顺序进行存储的呢？这就涉及到大小端模式的问题了。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;大端模式：是指数据的高字节保存在内存的低地址中，而数据的低字节保存在内存的高地址中。&lt;/li&gt;
+  &lt;li&gt;小端模式：是指数据的高字节保存在内存的高地址中，而数据的低字节保存在内存的低地址中。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;以32位的整形数据为例，字节的排列顺序如下：
+&lt;img src=&quot;./assets/rve-asm/memory-endian-struct.jpg&quot; alt=&quot;arm cprs&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;PowerPC架构的CPU中一般是大端模式，x86、arm架构的CPU普遍采用小端模式。&lt;/p&gt;
+
+&lt;h3 id=&quot;栈和堆&quot;&gt;栈和堆&lt;/h3&gt;
+
+&lt;p&gt;栈和堆是学汇编需要了解的两个概念，栈和堆是汇编使用内存时的两种划分，它们都是内存上的存储数据的空间。&lt;/p&gt;
+
+&lt;p&gt;栈：大家都知道，栈是一种数据结构，数据按照先进后出的方式进行存储，汇编里也是如此，但一般只用于保存函数内的局部变量。在调用一个函数的时候，先预留足够数量的栈空间，供函数内部使用，在函数结束时，又需要移动栈指针空间，使之与进入函数前的地址保持一致，即所谓的&lt;code class=&quot;highlighter-rouge&quot;&gt;栈平衡&lt;/code&gt;。&lt;/p&gt;
+
+&lt;p&gt;堆：堆也是用于存放变量的，但不同于栈但是，栈用于保存申明方式定义的局部变量，而堆用于保存&lt;code class=&quot;highlighter-rouge&quot;&gt;alloc&lt;/code&gt;或&lt;code class=&quot;highlighter-rouge&quot;&gt;new&lt;/code&gt;方式申请的变量。由于是运行时才使用内存空间，就导致编译器无法知道你需要多大的空间，所以在C/C++里这种方式申请的内存需要自己手动释放。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-asm/asm-stack-heap.jpg&quot; alt=&quot;stack heap&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;值得注意的是，堆内存是从低地址往高地址使用内存空间的，而栈是从高地址往低地址使用内存空间。这就是为什么我们经常看到函数的开头会有一句 &lt;code class=&quot;highlighter-rouge&quot;&gt;SUB SP 0x20&lt;/code&gt;这种移动SP指针下移的代码，哦！原来是在准备栈空间给函数内部的局部变量使用；而在函数末尾又会&lt;code class=&quot;highlighter-rouge&quot;&gt;ADD SP 0x20&lt;/code&gt;去还原栈指针，保持栈平衡。&lt;/p&gt;
+
+&lt;p&gt;这里大家可以思考一下，我们写递归函数时，如果遇到死循环抛出异常，为什么叫StackOverflow异常？就是因为死循环调用函数时，会一直移动SP下移，最终栈内存会和堆内存相遇，这时候就是我们遇到的栈内存溢出异常了。&lt;/p&gt;
+
+&lt;h3 id=&quot;汇编语言的特点&quot;&gt;汇编语言的特点&lt;/h3&gt;
+
+&lt;p&gt;由于汇编是最接近机器代码的程序设计语言，因此有很多特性不同于我们熟悉的高级语言：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;没有申请、释放内存的概念，对内存操作没有限制，拿到内存地址就读写。不同于C/C++等语言里，局部变量的内存的分配和释放都是编译器在编译的时候完成的。&lt;/li&gt;
+  &lt;li&gt;没有函数、方法等概念，高级语言中所有的函数、方法对应到汇编语言中都是一个个代码片段。而在汇编里实现高级语言的函数调用是：
+    &lt;ul&gt;
+      &lt;li&gt;保存当前代码地址的下一个指令地址 &lt;code class=&quot;highlighter-rouge&quot;&gt;addr_a&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;转跳到代码片段 &lt;code class=&quot;highlighter-rouge&quot;&gt;fun_a&lt;/code&gt;的地址 &lt;code class=&quot;highlighter-rouge&quot;&gt;addr_b&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;代码片段 &lt;code class=&quot;highlighter-rouge&quot;&gt;fun_a&lt;/code&gt;执行完后，转跳到地址 &lt;code class=&quot;highlighter-rouge&quot;&gt;addr_a&lt;/code&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;以上，在自己实战积累后，会有更深入的理解和感悟。&lt;/p&gt;
+
+&lt;h3 id=&quot;cpu的分类&quot;&gt;CPU的分类&lt;/h3&gt;
+
+&lt;p&gt;由上面的描述的内容可知，汇编语言操作的对象是CPU、是硬件，但CPU的架构分多种，常见的架构有 &lt;code class=&quot;highlighter-rouge&quot;&gt;x86&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;ARM&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;MIPS&lt;/code&gt;等。个人计算机主要以 &lt;code class=&quot;highlighter-rouge&quot;&gt;x86&lt;/code&gt;系列架构为主；手机、平板等移动设备则以 &lt;code class=&quot;highlighter-rouge&quot;&gt;ARM&lt;/code&gt;系列架构为主，下文将围绕这两种架构来分别描述汇编语言。&lt;/p&gt;
+
+&lt;h2 id=&quot;arm汇编&quot;&gt;ARM汇编&lt;/h2&gt;
+
+&lt;p&gt;ARM架构又分为32位架构和64位架构，目前市面上的手机基本都是64位的，而64位是向下兼容32位的。大部分应用开发商（特别是Android）在使用C/C++混合编码时，为了兼容旧设备，在编译时都会保留32位的编译选项，所以本文将以32位的ARM为例来分析汇编。&lt;/p&gt;
+
+&lt;h3 id=&quot;arm寄存器&quot;&gt;ARM寄存器&lt;/h3&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;#&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;别名&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;用途&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R0&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R1&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R2&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R3&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R4&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R5&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R6&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R7&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;一般存放系统调用号&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R8&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R9&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R10&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R11&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;FP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;栈帧指针寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R12&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;IP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;程序内部调用寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R13&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;栈指针寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R14&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;程序链接寄存器，一般存放函数的返回地址&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R15&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;PC&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;程序计数寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;CPSR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;-&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;状态寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;在函数调用中，参数通用寄存器R0 ～ R3传递，超过4个的参数剩余参数，压入栈中，通过栈传参，函数的返回值存入R0寄存器中。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;CPSR&lt;/strong&gt;（Current Program Status Register）：当前程序状态寄存器，用于存放上一次指令执行的状态，按位表示状态，即每一位表示了不同的状态。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-asm/arm-cpsr-info.jpg&quot; alt=&quot;arm cprs&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;CPSR的低8位称为控制位，程序无法修改（除非CPU处于特权模式）。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;N&lt;/code&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Z&lt;/code&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;C&lt;/code&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;V&lt;/code&gt; 为条件码标志位，它们的值受逻辑运算或算术运算的结果而改变。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Bits&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Flag&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Desciption&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[31]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;N(Negative)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;指令执行结果为负数时置1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[30]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;Z(Zero)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;指令执行结果为0时置1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[29]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;C(Carry)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;对于加法有进位则置1，对于减法有借位则置0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[28]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;V(Overflow)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;指令结果不能用32位的二进制补码存储，即发生了溢出时置1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[24]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;J(Jazelle)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;允许ARM处理器去以硬件执行java字节码的状态标志&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[9]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;E(Endian)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;小端序置0，大端序置1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[5]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;T(Thumb)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;当为Thumb模式时置1，ARM模式置0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[4:0]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;M(Mode)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;当前的权限模式（用户态，内核态）&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id=&quot;常见指令&quot;&gt;常见指令&lt;/h3&gt;
+
+&lt;p&gt;在做逆向分析阅读汇编代码时，我们不需要详细理解每一句汇编代码的作用，很多时候都是跳跃式的阅读，掌握关键的汇编代码逻辑即可。汇编的指令比较多，我们也并不需要全部记住，掌握一些常见的指令就能理解大部分的汇编代码，遇到其他不常用指令实在是需要理解，再去查找手册就行了。&lt;/p&gt;
+
+&lt;p&gt;下面列举一些常见的汇编指令：&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Name&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Description&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Name&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Description&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;MOV&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;移动数据&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;EOR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;异或运算&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ADD&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;加法运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LDR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;加载数据&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SUB&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;减法运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;STR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;存储数据&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;MUL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;乘法运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LDM&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;多次加载数据&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LSL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑左移&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;STM&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;多次存储数据&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LSR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑右移&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;PUSH&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据入栈&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ASR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;算术右移&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;POP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据出栈&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ROR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;循环右移&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;B&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;分支转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;CMP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据比较&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;BL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;链接(保存当前地址用于返回)分支转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;AND&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;与运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;BX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;分支转跳切换(条件切换Thumb模式)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ORR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;或运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;BLX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;链接分支转跳切换&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id=&quot;实战分析&quot;&gt;实战分析&lt;/h3&gt;
+
+&lt;p&gt;下面我们来分析一小段简单的汇编代码。&lt;/p&gt;
+
+&lt;h4 id=&quot;c语言源码&quot;&gt;C语言源码&lt;/h4&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;fun_A&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;一个简单的加法函数&lt;code class=&quot;highlighter-rouge&quot;&gt;fun_A&lt;/code&gt;，通过IDA反汇编得到对应的汇编代码&lt;/p&gt;
+
+&lt;div class=&quot;language-nasm highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;var_14&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var_10&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x10&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var_C&lt;/span&gt;           &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0xC&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var_8&lt;/span&gt;           &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var_4&lt;/span&gt;           &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;; __unwind {&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;SUB&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;           &lt;span class=&quot;c&quot;&gt;; 申请栈空间，20 byte&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;MOV&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;R1&lt;/span&gt;                  &lt;span class=&quot;c&quot;&gt;; 参数b&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;MOV&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;                  &lt;span class=&quot;c&quot;&gt;; 参数a&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;STR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 保存a到栈&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;STR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 保存b到栈&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;LDR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 读取a&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;LDR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 读取b&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;ADD&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;R1&lt;/span&gt;                  &lt;span class=&quot;c&quot;&gt;; a + b&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;STR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_C&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 结果c保存到栈&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;LDR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_C&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;c&quot;&gt;; 读取c&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;STR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_10&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;   &lt;span class=&quot;c&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;STR&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;R3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var_14&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;]&lt;/span&gt;   &lt;span class=&quot;c&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;ADD&lt;/span&gt;             &lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;mh&quot;&gt;0x14&lt;/span&gt;           &lt;span class=&quot;c&quot;&gt;; 还原栈空间&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;BX&lt;/span&gt;              &lt;span class=&quot;n&quot;&gt;LR&lt;/span&gt;                      &lt;span class=&quot;c&quot;&gt;; 返回到调用地址&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;; }&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;可以看到，一段C代码被编译器汇编之后得到到汇编代码，代码可划分为以下几个部分：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;申请栈空间&lt;/li&gt;
+  &lt;li&gt;保存参数到栈中&lt;/li&gt;
+  &lt;li&gt;真正关键的代码逻辑&lt;/li&gt;
+  &lt;li&gt;恢复栈空间，保持栈平衡&lt;/li&gt;
+  &lt;li&gt;返回&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;因此我们在看到一段函数代码的时候，开头的申请栈空间、保存参数以及末尾的恢复栈空间、返回的代码可以直接跳过，直接分析中间的逻辑代码。另外可以看到，由编译器编译得到的汇编代码会有很多冗余的部分，毕竟是机器翻译，逆向分析的时候不用太过深究，直接跳过即可。&lt;/p&gt;
+
+&lt;h2 id=&quot;x86汇编&quot;&gt;x86汇编&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;x86与ARM汇编相比，语法上稍微有些不同，但分析汇编的代码思路都是一致的，这里介绍一下x86汇编的基本要点和硬件上的不同之处。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;x86架构也分32位架构和64位架构，目前市面上的个人电脑普遍是64位，向下兼容32位，下面以64位的x86_64为例分析。&lt;/p&gt;
+
+&lt;h3 id=&quot;x86_64寄存器&quot;&gt;x86_64寄存器&lt;/h3&gt;
+
+&lt;h4 id=&quot;16个通用寄存器&quot;&gt;16个通用寄存器&lt;/h4&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;#&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;用途&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;#&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;用途&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RAX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常作为函数返回值&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R8&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数5&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RBX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;被调用者保护的寄存器，或用作基指针&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R9&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数6&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RCX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数4&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R10&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RDX&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数3&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R11&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RSI&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数2&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R12&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RDI&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;通常用作参数1&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R13&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RBP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;被调用者保护的寄存器，或用作帧指针&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R14&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RSP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;栈指针寄存器，指向栈顶&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;R15&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;通用寄存器还经常可以看到只使用32位、16位、高8位、低8位的用法，但仅限于 &lt;code class=&quot;highlighter-rouge&quot;&gt;RAX&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;RBX&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;RCX&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;RDX&lt;/code&gt;这几个寄存器。以RAX寄存器为例，对应用法的数据结构如下图所示：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-asm/x86_64-register-compat.jpg&quot; alt=&quot;x86_64 register compat&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;eflags状态寄存器&quot;&gt;EFLAGS(状态寄存器)&lt;/h4&gt;
+
+&lt;p&gt;x86及x86_64同样也有自己的状态寄存器，存放当前的程序状态标志。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;状态标志位&lt;/strong&gt;：用于指示算术指令（如&lt;code class=&quot;highlighter-rouge&quot;&gt;ADD&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;SUB&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;MUL&lt;/code&gt;等）的运算结果&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Bits&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Flag&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Desciption&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[0]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;CF(Carry Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;对于算术运算有进位或借位则置1，反之则置0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[2]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;PF(Partiy Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;运算结果最低有效字节包含偶数个1则置1，反之则置0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[4]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;AF(Adjust Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[6]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ZF(Zero Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;运算结果为0则置1，反之置0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[7]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SF(Sign Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;运算结果为正则置0，负数置1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[11]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;OF(Overflow Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;结果是较大的正数或较小的负数，并且无法匹配目的操作数（即结果溢出）时将该位置1，反之则置0&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;&lt;strong&gt;控制标志位&lt;/strong&gt;：控制串指令(MOVS, CMPS, SCAS, LODS以及STOS)。设置DF标志使得串指令自动递减（从高地址向低地址方向处理字符串），清除该标志则使得串指令自动递增。STD以及CLD指令分别用于设置以及清除DF标志。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Bits&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Flag&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Desciption&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;[10]&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;DF(Direction Flag)&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;置1时串指令自动递减（从高地址向低地址方向处理字符串），置0时则使得串指令自动递增&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h4 id=&quot;16个向量寄存器&quot;&gt;16个向量寄存器&lt;/h4&gt;
+
+&lt;p&gt;用于向量运算&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;#&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;用途&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;XMM0-XMM1&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;用来传递和返回浮点参数&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;XMM2-XMM7&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;用来传递浮点参数&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;XMM8-XMM15&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;临时寄存器&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id=&quot;常用指令&quot;&gt;常用指令&lt;/h3&gt;
+
+&lt;p&gt;与ARM汇编类似，这里列举一些常见的指令，用于基本的逆向分析：&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Name&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Description&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Name&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Description&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;MOV&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;移动数据&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;INTO&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;溢出中断指令&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;PUSH&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据入栈&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SHL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑左移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;POP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据出栈&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SHR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑右移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ADD&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;加法运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SAL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;算术左移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SUB&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;减法运算&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SAR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;算术右移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;INC&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;操作数加1&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ROL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;循环左移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;DEC&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;操作数减1&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ROR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;循环右移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ADC&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;多字节加法，带进位(CF)做加法&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RCL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;带进位循环左移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;SBB&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;多字节减法，带借位(CF)做减法&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RCR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;带进位循环右移&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;CMP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;数据比较，只改变标志寄存器&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;LEA&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;取偏移地址指令&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;AND&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑与&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JMP&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;转移指令&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;OR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑或&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JE&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;等于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;XOR&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑异或&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JNE&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;不等于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;NOT&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑非&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JG&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;大于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;TEST&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;逻辑与运算类似，但只改变标记寄存器&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JGE&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;大于等于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;CALL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;子程序调用指令&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JL&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;小于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;RET&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;返回指令&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;JLE&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;小于等于则转跳&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;INT&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;中断指令&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;参考&quot;&gt;参考&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://azeria-labs.com/arm-data-types-and-registers-part-2&quot;&gt;Azeria Libs(ARM Data Types And Registers)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
 </description>
         <pubDate>Tue, 28 Jan 2020 00:00:00 +0800</pubDate>
         <link>//reverse-engineering-asm</link>
@@ -121,10 +793,8 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
       </item>
     
       <item>
-        <title>逆向工程简述</title>
-        <description>&lt;blockquote&gt;
-  &lt;p&gt;从一个逆向小白的正向工程师转向逆向工程的学习之旅&lt;/p&gt;
-&lt;/blockquote&gt;
+        <title>逆向工程入门简述</title>
+        <description>&lt;p&gt;从一个逆向小白的正向工程师转向逆向工程的学习之旅&lt;/p&gt;
 
 &lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
 
@@ -209,6 +879,178 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
         <link>//reverse-engineering-summary</link>
         <link href="/reverse-engineering-summary"/>
         <guid isPermaLink="true">/reverse-engineering-summary</guid>
+      </item>
+    
+      <item>
+        <title>Sample Page</title>
+        <description>&lt;p&gt;Text can be &lt;strong&gt;bold&lt;/strong&gt;, &lt;em&gt;italic&lt;/em&gt;, &lt;del&gt;strikethrough&lt;/del&gt; or &lt;code class=&quot;highlighter-rouge&quot;&gt;keyword&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;another-page&quot;&gt;Link to another page&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;There should be whitespace between paragraphs.&lt;/p&gt;
+
+&lt;p&gt;There should be whitespace between paragraphs. We recommend including a README, or a file with information about your project.&lt;/p&gt;
+
+&lt;h1 id=&quot;header-1&quot;&gt;&lt;a href=&quot;#header-1&quot;&gt;&lt;/a&gt;Header 1&lt;/h1&gt;
+
+&lt;p&gt;This is a normal paragraph following a header. GitHub is a code hosting platform for version control and collaboration. It lets you and others work together on projects from anywhere.&lt;/p&gt;
+
+&lt;h2 id=&quot;header-2&quot;&gt;&lt;a href=&quot;#header-2&quot;&gt;&lt;/a&gt;Header 2&lt;/h2&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;This is a blockquote following a header.&lt;/p&gt;
+
+  &lt;p&gt;When something is important enough, you do it even if the odds are not in your favor.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&quot;header-3&quot;&gt;&lt;a href=&quot;#header-3&quot;&gt;&lt;/a&gt;Header 3&lt;/h3&gt;
+
+&lt;div class=&quot;language-js highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Javascript code with syntax highlighting.&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;fun&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;lang&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;l&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;dateformat&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;i18n&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;./lang/&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;l&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# Ruby code with syntax highlighting&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;GitHubPages&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Dependencies&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;gems&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gem&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;add_dependency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gem&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;= &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;header-4&quot;&gt;&lt;a href=&quot;#header-4&quot;&gt;&lt;/a&gt;Header 4&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;This is an unordered list following a header.&lt;/li&gt;
+  &lt;li&gt;This is an unordered list following a header.&lt;/li&gt;
+  &lt;li&gt;This is an unordered list following a header.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;header-5&quot;&gt;&lt;a href=&quot;#header-5&quot;&gt;&lt;/a&gt;Header 5&lt;/h5&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;This is an ordered list following a header.&lt;/li&gt;
+  &lt;li&gt;This is an ordered list following a header.&lt;/li&gt;
+  &lt;li&gt;This is an ordered list following a header.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h6 id=&quot;header-6&quot;&gt;&lt;a href=&quot;#header-6&quot;&gt;&lt;/a&gt;Header 6&lt;/h6&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;head1&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;head two&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;three&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ok&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;good swedish fish&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;nice&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;out of stock&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;good and plenty&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;nice&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ok&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;good &lt;code class=&quot;highlighter-rouge&quot;&gt;oreos&lt;/code&gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;hmm&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;ok&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;good &lt;code class=&quot;highlighter-rouge&quot;&gt;zoute&lt;/code&gt; drop&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;yumm&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h3 id=&quot;theres-a-horizontal-rule-below-this&quot;&gt;There’s a horizontal rule below this.&lt;/h3&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;here-is-an-unordered-list&quot;&gt;Here is an unordered list:&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Item foo&lt;/li&gt;
+  &lt;li&gt;Item bar&lt;/li&gt;
+  &lt;li&gt;Item baz&lt;/li&gt;
+  &lt;li&gt;Item zip&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;and-an-ordered-list&quot;&gt;And an ordered list:&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Item one&lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+  &lt;li&gt;Item three&lt;/li&gt;
+  &lt;li&gt;Item four&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;and-a-nested-list&quot;&gt;And a nested list:&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;level 1 item
+    &lt;ul&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+      &lt;li&gt;level 2 item
+        &lt;ul&gt;
+          &lt;li&gt;level 3 item&lt;/li&gt;
+          &lt;li&gt;level 3 item&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;level 1 item
+    &lt;ul&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;level 1 item
+    &lt;ul&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+      &lt;li&gt;level 2 item&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;level 1 item&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;small-image&quot;&gt;Small image&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://assets-cdn.github.com/images/icons/emoji/octocat.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;large-image&quot;&gt;Large image&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://guides.github.com/activities/hello-world/branching.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;definition-lists-can-be-used-with-html-syntax&quot;&gt;Definition lists can be used with HTML syntax.&lt;/h3&gt;
+
+&lt;dl&gt;
+&lt;dt&gt;Name&lt;/dt&gt;
+&lt;dd&gt;Godzilla&lt;/dd&gt;
+&lt;dt&gt;Born&lt;/dt&gt;
+&lt;dd&gt;1952&lt;/dd&gt;
+&lt;dt&gt;Birthplace&lt;/dt&gt;
+&lt;dd&gt;Japan&lt;/dd&gt;
+&lt;dt&gt;Color&lt;/dt&gt;
+&lt;dd&gt;Green&lt;/dd&gt;
+&lt;/dl&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Long, single-line code blocks should not wrap. They should horizontally scroll if they are too long. This line should be long enough to demonstrate this.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;The final element.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+</description>
+        <pubDate>Tue, 12 Dec 2017 00:00:00 +0800</pubDate>
+        <link>//Sample-Page</link>
+        <link href="/Sample-Page"/>
+        <guid isPermaLink="true">/Sample-Page</guid>
       </item>
     
   </channel>
