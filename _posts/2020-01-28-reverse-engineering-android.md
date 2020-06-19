@@ -4,7 +4,7 @@ published: true
 description: Java语言逆向(Android APP)的入门技巧
 ---
 
-Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。
+Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述Android APP逆向的基本过程。
 
 ## 静态分析
 
@@ -58,7 +58,7 @@ jar -cvf classes-combined.jar -C tmp .
 ### 准备工具
 
 - **userdebug版**的Android手机。
-- Android Stuido
+- Android Stuido + [smalidea插件](https://github.com/JesusFreke/smali/wiki/smalidea)
 
 为什么是userdebug版的？因为userdebug版的系统，所有的应用都是debuggable的，这样就可以通过Android Studio开启调试给应用打断点调试。网上也有其他手段，比如：
 
@@ -69,7 +69,7 @@ jar -cvf classes-combined.jar -C tmp .
 
 ### 打开项目
 
-- 打开Android Studio
+- 打开Android Studio(确认安装好smalidea插件)
 - File --> Open --> 选择静态分析中反编译的smali源码目录 `QQMusic72282\`
 - Mark smali及所有smali_classesx为 `Sources Root`
 ![as setup src](./assets/rve-android/as-setup-src.png)

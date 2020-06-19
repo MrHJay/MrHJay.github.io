@@ -19,7 +19,7 @@
 <meta property="og:description" content="Coder Jay’s persional tech blog" />
 <meta property="og:site_name" content="Coder Jay’s Blog" />
 <script type="application/ld+json">
-{"@type":"WebSite","url":"/blog/","name":"Coder Jay’s Blog","headline":"Coder Jay’s Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional tech blog","@context":"https://schema.org"}</script>
+{"@type":"WebSite","headline":"Coder Jay’s Blog","url":"/blog/","name":"Coder Jay’s Blog","author":{"@type":"Person","name":"Coder Jay"},"description":"Coder Jay’s persional tech blog","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 </head>
@@ -44,21 +44,27 @@
         <ul>
     
       <li>
+          <h2><a href="/blog/reverse-engineering-oc">Objective-C语言的逆向(Mac OS)</a></h2>
+          <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
+          <p>逆向分析Objective-C程序时，就需要用到IDA Pro和Hopper Disassembler等工具来帮助我们分析了。IDA Pro功能强大，插件丰富，可以为逆向分析提供许多便利；Hopper Disassembler对于反汇编Objective-C有其优势，动态调试十分方便。通常可以两个工具同时使用。下面以Mac版本的QQ音乐为例，初探一下Objective-C的逆向分析流程。 静态分析 使用IDA Pro分析 首先打开IDA64.app（Mac版的QQ音乐是64位版本，所以这里使用的是IDA64），点击菜单File –&gt;...</p>
+      </li>
+    
+      <li>
           <h2><a href="/blog/reverse-engineering-asm">汇编语言简述(逆向工程)</a></h2>
           <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
-          <p>在逆向分析C/C++等编译型语言时，汇编是一项必备的功能，掌握简单汇编知识是十分有必要的。 一些基本概念 汇编语音是面向机器的程序设计语音，使用助记符代替操作CPU指令的机器码，所以汇编语言也称之为符号语言。 不同于C/C++、Java等高级语言，汇编语言操作的对象是CPU、寄存器、内存。 通俗来讲，在汇编语言的里，执行一个指令的一般流程是： 将需要操作的内容写入寄存器 执行对应的机器指令，让CPU运算结果 从寄存器读取结果的值 寄存器 要了解汇编，首先需要知道，什么是寄存器。...</p>
+          <p>在逆向分析C/C++等编译型语言时，分析汇编代码是必不可少的。因此，掌握一些简单汇编的知识是十分有必要的。 一些基本概念 汇编语音是面向机器的程序设计语音，使用助记符代替操作CPU指令的机器码，所以汇编语言也称之为符号语言。 不同于C/C++、Java等高级语言，汇编语言操作的对象是CPU、寄存器、内存。 通俗来讲，在汇编语言的里，执行一个指令的一般流程是： 将需要操作的内容写入寄存器 执行对应的机器指令，让CPU运算结果 从寄存器读取结果的值 寄存器 要了解汇编，首先需要知道，什么是寄存器。...</p>
       </li>
     
       <li>
           <h2><a href="/blog/reverse-engineering-android">Java语言的逆向(Android APP)</a></h2>
           <time datetime="2020-01-28T00:00:00+08:00">28 Jan 2020</time>
-          <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。 静态分析 将APK反编译成比较方便理解的代码（如smali、Java代码等），进行静态分析，了解代码的流程和设计逻辑。 将APK反编译成smali代码 apktool d QQMusic72282.apk 反编译出如下文件： 将APK反编译成Jar包 unzip...</p>
+          <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述Android APP逆向的基本过程。 静态分析 将APK反编译成比较方便理解的代码（如smali、Java代码等），进行静态分析，了解代码的流程和设计逻辑。 将APK反编译成smali代码 apktool d QQMusic72282.apk 反编译出如下文件： 将APK反编译成Jar包...</p>
       </li>
     
       <li>
           <h2><a href="/blog/reverse-engineering-summary">逆向工程入门简述</a></h2>
           <time datetime="2020-01-27T00:00:00+08:00">27 Jan 2020</time>
-          <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅 前言 本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。 本文仅作为学习交流，请勿用作非法用途。 什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。 本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse...</p>
+          <p>从一个逆向小白的正向工程师转向逆向工程的学习之旅 前言 在写这片文章时，本人入坑逆向也没有多久，作为小白，文章重点探讨小白入门的一些基本要点，如有大佬翻牌，还望多指点。 本文仅作为学习交流，请勿用作非法用途。 什么是逆向？ 通俗来讲，逆向工程就是将机器才能够懂的机器代码（0101二进制代码）翻译成人能够读懂的代码（汇编、smali代码）。 但实际情况往往是，我们只寻找关键的代码去翻译或仅了解其业务逻辑，因为要将所有的机器代码翻译出来，工作量是极其巨大的且繁琐的。 本人原本是做Android开发的，所以最早接触的是Android APK的逆向，在没有涉及到JNI代码的APK中，逆向也相对容易一些。 但是很多应用开发者会比较注重代码安全，一些关键代码使用JNI的方式实现，来增加逆向难度，但仅仅是增加了难度，并不能阻挡reverse...</p>
       </li>
     
 </ul>

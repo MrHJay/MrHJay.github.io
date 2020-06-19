@@ -12,8 +12,193 @@
     </author>
     
       <item>
+        <title>Objective-C语言的逆向(Mac OS)</title>
+        <description>&lt;p&gt;逆向分析Objective-C程序时，就需要用到IDA Pro和Hopper Disassembler等工具来帮助我们分析了。IDA Pro功能强大，插件丰富，可以为逆向分析提供许多便利；Hopper Disassembler对于反汇编Objective-C有其优势，动态调试十分方便。通常可以两个工具同时使用。下面以Mac版本的QQ音乐为例，初探一下Objective-C的逆向分析流程。&lt;/p&gt;
+
+&lt;h2 id=&quot;静态分析&quot;&gt;静态分析&lt;/h2&gt;
+
+&lt;h3 id=&quot;使用ida-pro分析&quot;&gt;使用IDA Pro分析&lt;/h3&gt;
+
+&lt;p&gt;首先打开IDA64.app（Mac版的QQ音乐是64位版本，所以这里使用的是IDA64），点击菜单File –&amp;gt; Open，找到QQ音乐所在目录选中：
+&lt;img src=&quot;./assets/rve-oc/ida-open-app.png&quot; alt=&quot;open App&quot; /&gt;
+可以看到，QQ音乐.app其实只是一个特殊的文件夹，依次选择Contents –&amp;gt; MacOs –&amp;gt; QQMusic(可执行二进制文件)，并点击Open打开QQMusic。打开后IDA会解析二进制文件，解析过程比较长，需耐心等待（解析完成后可以Ctrl+S保存解析结果，保存为后缀&lt;code class=&quot;highlighter-rouge&quot;&gt;.ida&lt;/code&gt;的文件，下次可以直接用IDA打开）。
+&lt;img src=&quot;./assets/rve-oc/ida-qq-music-main.png&quot; alt=&quot;QQMusic main&quot; /&gt;
+IDA左边Function Window列出了解析出来的的所有函数列表，需要注意的是，OC反编译出来后，并没有以&lt;code class=&quot;highlighter-rouge&quot;&gt;类&lt;/code&gt;来划分函数，因为所有的类都被打包在同一个文件里，但是IDA反编译的函数是以&lt;code class=&quot;highlighter-rouge&quot;&gt;-[类名 函数名]&lt;/code&gt;这样的规律来命名。&lt;/p&gt;
+
+&lt;p&gt;这里，我们可以看出，计算机并不知道什么是类、什么是面向对象，暂且可以这样说，对于计算机只有一段段的可执行代码 – 即函数。（这里只说暂且，等后续深入研究汇编代码时就会发现，计算机其实也不认识函数O_o）&lt;/p&gt;
+
+&lt;p&gt;然后我选择&lt;code class=&quot;highlighter-rouge&quot;&gt;_main&lt;/code&gt;函数，并双击打开，就是左边的汇编代码内容了，可能小白（包括我）第一次看到这个代码会有点懵。不要怕，问题不大～，我们输入&lt;code class=&quot;highlighter-rouge&quot;&gt;F5&lt;/code&gt;，强大的IDA就会为我们生产C的伪代码：
+&lt;img src=&quot;./assets/rve-oc/ida-qq-music-main-c.png&quot; alt=&quot;QQMusic main C&quot; /&gt;
+这样是不是就有种似曾相识的感觉了？◉‿◉&lt;/p&gt;
+
+&lt;p&gt;熟悉OC的朋友看到NSApplicationMain这个函数应该很清楚，这里其实就是OC框架下的程序入口。但是传入的参数可能会让人疑惑，我们可以和汇编代码比较起来看，然后就会明白，这只是IDA翻译成伪代码时的优化问题，&lt;code class=&quot;highlighter-rouge&quot;&gt;v3&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;v4&lt;/code&gt;其实就是参数&lt;code class=&quot;highlighter-rouge&quot;&gt;argc&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;argv&lt;/code&gt;。所以伪代码在逆向分析中仅供参考，用于快速的分析代码流程逻辑非常有帮助，但是到实际的调试阶段，还是需要以汇编代码为准。&lt;/p&gt;
+
+&lt;p&gt;滑动函数列表，我们可以看到QQ音乐代码中所有的函数，通过函数名称可以看出程序中类的划分、命名等。通过这些信息可以大致猜到这些类大概是干嘛用的。比如&lt;code class=&quot;highlighter-rouge&quot;&gt;QQMusicMainPlayerController&lt;/code&gt; 这个类应该是QQ音乐主播放器View（MVC结构）对应的Controller，类里的函数包括了一系列的UI事件处理，如收藏歌曲、下载事件处理、显示歌手详情等（都是根据函数名盲猜的）。
+&lt;img src=&quot;./assets/rve-oc/ida-qq-music-fun-list.png&quot; alt=&quot;QQMusic function list&quot; /&gt;
+图中展示了&lt;code class=&quot;highlighter-rouge&quot;&gt;QQMusicMainPlayerController downloadClickActionAtRow&lt;/code&gt;这个函数的代码内容，代码中可以看到很多&lt;code class=&quot;highlighter-rouge&quot;&gt;_objc_msgSend&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;objc_storeStrong&lt;/code&gt;等函数调用，这其实是OC的消息机制导致的。在OC中，所有的函数调用都被转换成给这个对象发消息(即 &lt;code class=&quot;highlighter-rouge&quot;&gt;_objc_msgSend&lt;/code&gt;)，而 &lt;code class=&quot;highlighter-rouge&quot;&gt;objc_storeStrong&lt;/code&gt;、&lt;code class=&quot;highlighter-rouge&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/code&gt;则是OC内存回收机制相关的函数调用，这些函数都是编译器在编译代码时自动生成的代码，感兴趣可以自行深入了解一下OC的消息机制和几种内存回收原理。&lt;/p&gt;
+
+&lt;p&gt;简单分析(盲猜)一下代码的大致流程：&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;__cdecl&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;QQMusicMainPlayerController&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;downloadClickActionAtRow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Event&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;QQMusicMainPlayerController&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SEL&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST40_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST38_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST30_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST28_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST20_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST10_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// ST08_8&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+48h] [rbp-48h]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;__int64&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+50h] [rbp-40h]&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v13&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+68h] [rbp-28h]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;__int64&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v14&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+70h] [rbp-20h]&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+7Ch] [rbp-14h]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;SEL&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v16&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+80h] [rbp-10h]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;QQMusicMainPlayerController&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v17&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// [rsp+88h] [rbp-8h]&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;v17&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v16&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v15&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v14&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;objc_storeStrong&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v14&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// 1. 向ListTagManager拿到shareListTagManager对象 v5&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v4&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;OBJC_CLASS___ListTagManager&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;shareListTagManager&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v5&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// 2. 再通过getListByTag得到歌曲的listData，即v13&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v6&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;getListByTag:&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v7&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v8&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;listData&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v13&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;_objc_release&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;_objc_release&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// 3. 再通过objectAtIndex得到这一首歌曲的对应的数据对象，即v12&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v9&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v13&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;objectAtIndex:&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v12&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;objc_retainAutoreleasedReturnValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// 4. 创建一个DownloadQualityMenu对象并初始化得到v11&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v10&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;OBJC_CLASS___DownloadQualityMenu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;alloc&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;v11&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;init&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// 5. 调用showMenuWithEvent函数，并传入v12显示下载菜单&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;_objc_msgSend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;showMenuWithEvent:SongInfo:&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v14&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;objc_storeStrong&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;objc_storeStrong&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;objc_storeStrong&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v13&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;objc_storeStrong&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v14&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0LL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;向 &lt;code class=&quot;highlighter-rouge&quot;&gt;ListTagManager&lt;/code&gt;拿到 &lt;code class=&quot;highlighter-rouge&quot;&gt;shareListTagManager&lt;/code&gt;对象，即 &lt;code class=&quot;highlighter-rouge&quot;&gt;v5&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;再通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;getListByTag&lt;/code&gt;得到歌曲的 &lt;code class=&quot;highlighter-rouge&quot;&gt;listData&lt;/code&gt;，即 &lt;code class=&quot;highlighter-rouge&quot;&gt;v13&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;再通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;objectAtIndex&lt;/code&gt;得到这一首歌曲的对应的数据对象，即 &lt;code class=&quot;highlighter-rouge&quot;&gt;v12&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;DownloadQualityMenu&lt;/code&gt;对象并初始化得到 &lt;code class=&quot;highlighter-rouge&quot;&gt;v11&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;v11&lt;/code&gt; 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;showMenuWithEvent&lt;/code&gt;函数，并传入 &lt;code class=&quot;highlighter-rouge&quot;&gt;v12&lt;/code&gt;显示下载菜单&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;可以看到，以上的代码逻辑都是根据现有伪代码信息猜的。可能你会疑惑，都是怎么猜出来的，正如我在&lt;a href=&quot;reverse-engineering-summary&quot;&gt;逆向工程入门简述&lt;/a&gt;中提到的，猜逻辑的前提是具有一定的编程经验。可以说编程经验越丰富，猜的速度和猜中的几率也就更快更大。&lt;/p&gt;
+
+&lt;h2 id=&quot;动态分析&quot;&gt;动态分析&lt;/h2&gt;
+
+&lt;p&gt;前面介绍了如使用IDA静态分析OC程序，接下来说一下如何使用Hopper Disassembler动态调试OC程序。&lt;/p&gt;
+
+&lt;p&gt;首先同样的用Hopper Disassembler打开QQ音乐APP，直接将QQ音乐.app拖入Hopper Disassembler即可。和IDA一样，新打开的app文件需要解析，这个过程比较耗时，需要耐心等待，解析完成后Ctrl+S另存文件，保存解析后的数据。解析完成后可以看到，左边窗口同样是函数列表，右边窗口展示代码，顶部Tab可以切换汇编代码/视图/伪代码/16进制模式。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-qq-music-main.png&quot; alt=&quot;QQMusic main&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;既然要动态调试代码，我们就找一些代码试试水，比如试着获取歌曲相关信息的下载地址。我们在函数列表区域搜索框中输入关键字 &lt;code class=&quot;highlighter-rouge&quot;&gt;download&lt;/code&gt;，滚动结果，看看能搜到什么有用的信息&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-qq-music-download-search.png&quot; alt=&quot;hd download search&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;看到&lt;code class=&quot;highlighter-rouge&quot;&gt;DownloadBasicInfo download_url&lt;/code&gt;这个比较可疑，于是下断电，菜单点击Debug –&amp;gt; Select Debugger&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-menu.png&quot; alt=&quot;hd debugger menu&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;弹出对话框中点击Local Debugger，弹出调试对话框&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-local-debugger-dialog.png&quot; alt=&quot;hd local debugger dialog&quot; height=&quot;80%&quot; width=&quot;80%&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;运行QQ音乐.app，点击调试对话框中的Attach to Process，找到QQ音乐的进程，双击选中&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-select-process.png&quot; alt=&quot;hd debugger select process&quot; height=&quot;60%&quot; width=&quot;60%&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;这时，程序会断点在一个特定的地址，&lt;code class=&quot;highlighter-rouge&quot;&gt;continue execution&lt;/code&gt;按钮直接跳过即可，然后就可以愉快的调试啦&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-local-debugger-begin.png&quot; alt=&quot;hd debugger begin&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;回到QQ音乐，随便点一个歌单，点击播放&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-qq-music-list-preview.png&quot; alt=&quot;QQMusic list preivew&quot; height=&quot;80%&quot; width=&quot;80%&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;这时断点生效，程序停在0x000000010024b5a7这一地址&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-breakpoint-active.png&quot; alt=&quot;hd breakpoint active&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;查看RAX寄存器地址（点击寄存器左边小箭头），查看内存数据&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-breakpoint-val.png&quot; alt=&quot;hd breakpoint val 1&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;可以看到，url的值为&lt;code class=&quot;highlighter-rouge&quot;&gt;http://y.gtimg.cn/music/photo_new/T002R300x300M000000gpcQK4XrHUF.jpg&lt;/code&gt;，浏览器输入查看结果&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-url-val-1.png&quot; alt=&quot;hd debug URL value&quot; height=&quot;75%&quot; width=&quot;75%&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;正好是歌曲的封面图片数据。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-qq-music-song-info-1.png&quot; alt=&quot;QQMusic song info&quot; height=&quot;75%&quot; width=&quot;75%&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;这里需要注意的是，断点查看RAX寄存器地址的内存值时，前16字节我们是直接跳过的，第17个字节是字符串的长度，第18个字节开始才是URL的值。这是由NSString的数据结构决定的，感兴趣的可以深入了解一下。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;换一首歌再试试看，点击 &lt;code class=&quot;highlighter-rouge&quot;&gt;continue execution&lt;/code&gt;，QQ音乐点击下一首歌曲，再次断点查看内存值为 &lt;code class=&quot;highlighter-rouge&quot;&gt;http://y.gtimg.cn/music/photo_new/T002R300x300M000004WkGkE30RCep.jpg&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-breakpoint-val-2.png&quot; alt=&quot;hd breakpoint val 1&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;浏览器输入URL，再次验证得到的URL为歌曲封面图片。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;./assets/rve-oc/hd-debugger-url-val-2.png&quot; alt=&quot;hd debug URL value 2&quot; height=&quot;75%&quot; width=&quot;75%&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;逆向就这么容易吗&quot;&gt;逆向就这么容易吗&lt;/h3&gt;
+
+&lt;p&gt;实则不然，&lt;code class=&quot;highlighter-rouge&quot;&gt;DownloadBasicInfo download_url&lt;/code&gt;这个函数其实是我试了若干次其他可疑函数才命中的，而且一开始我其实是想找歌曲的下载地址，但是后面发现找到下载URL地址后，浏览器输入后返回403，说明还有其他参数需要加入（猜测是header、token等鉴权参数，服务器安全机制的常规操作）。难度太大就选了这个软柿子捏了，方便初学者入门，&lt;/p&gt;
+
+&lt;p&gt;实际逆向过程也是如此，二进制的可执行文件是面向机器的，它并不是按照人的习惯的规则去整理代码，因此我们往往需要花大量的精力猜测、尝试，才能找到自己关心的那段关键代码。&lt;/p&gt;
+
+&lt;p&gt;但是，相较于C/C++、Java等可混淆的语言而言，使用消息机制的OC的逆向分析还是要简单的多，函数名的字符串基本都是源码保持一致，这样猜测代码逻辑起来会容易很多，在&lt;a href=&quot;reverse-engineering-android&quot;&gt;Java语言的逆向(Android APP)&lt;/a&gt;章节中分析混淆后的Java代码，基本上就得靠动态调试来猜逻辑了。&lt;/p&gt;
+
+&lt;h2 id=&quot;快捷键&quot;&gt;快捷键&lt;/h2&gt;
+
+&lt;h3 id=&quot;ida-常用快捷键&quot;&gt;IDA 常用快捷键&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;函数列表&lt;code class=&quot;highlighter-rouge&quot;&gt;Ctrl+F&lt;/code&gt;：输入关键字查找&lt;/li&gt;
+  &lt;li&gt;IDA View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;F5&lt;/code&gt;：反编译汇编代码为伪代码&lt;/li&gt;
+  &lt;li&gt;IDA View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;Tab&lt;/code&gt;：转跳到当前行对应的伪代码&lt;/li&gt;
+  &lt;li&gt;IDA View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;G&lt;/code&gt;：转跳地址&lt;/li&gt;
+  &lt;li&gt;IDA View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;;&lt;/code&gt;：添加注释&lt;/li&gt;
+  &lt;li&gt;伪代码View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;：添加注释&lt;/li&gt;
+  &lt;li&gt;光标停在函数名中，&lt;code class=&quot;highlighter-rouge&quot;&gt;Enter&lt;/code&gt;：进入函数实现的代码，ESC返回上一层转跳位置&lt;/li&gt;
+  &lt;li&gt;光标停在函数名中，&lt;code class=&quot;highlighter-rouge&quot;&gt;X&lt;/code&gt;：查看函数引用&lt;/li&gt;
+  &lt;li&gt;光标停在变量名，&lt;code class=&quot;highlighter-rouge&quot;&gt;N&lt;/code&gt;：变量重命名&lt;/li&gt;
+  &lt;li&gt;光标停在变量名，&lt;code class=&quot;highlighter-rouge&quot;&gt;Y&lt;/code&gt;：修改变量申明类型&lt;/li&gt;
+  &lt;li&gt;Structures View中，&lt;code class=&quot;highlighter-rouge&quot;&gt;I&lt;/code&gt;：创建结构体&lt;/li&gt;
+  &lt;li&gt;光标在结构体ends这一行，&lt;code class=&quot;highlighter-rouge&quot;&gt;D&lt;/code&gt;：添加成员&lt;/li&gt;
+  &lt;li&gt;光标在结构体成员这一行，&lt;code class=&quot;highlighter-rouge&quot;&gt;D&lt;/code&gt;：改变成员字段大小(db, dw, dd, dq分别代表1-8个字节)&lt;/li&gt;
+  &lt;li&gt;光标在结构体成员这一行，&lt;code class=&quot;highlighter-rouge&quot;&gt;N&lt;/code&gt;：成员变量重命名&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Tue, 28 Jan 2020 00:00:00 +0800</pubDate>
+        <link>//reverse-engineering-oc</link>
+        <link href="/reverse-engineering-oc"/>
+        <guid isPermaLink="true">/reverse-engineering-oc</guid>
+      </item>
+    
+      <item>
         <title>汇编语言简述(逆向工程)</title>
-        <description>&lt;p&gt;在逆向分析C/C++等编译型语言时，汇编是一项必备的功能，掌握简单汇编知识是十分有必要的。&lt;/p&gt;
+        <description>&lt;p&gt;在逆向分析C/C++等编译型语言时，分析汇编代码是必不可少的。因此，掌握一些简单汇编的知识是十分有必要的。&lt;/p&gt;
 
 &lt;h2 id=&quot;一些基本概念&quot;&gt;一些基本概念&lt;/h2&gt;
 
@@ -699,7 +884,7 @@
     
       <item>
         <title>Java语言的逆向(Android APP)</title>
-        <description>&lt;p&gt;Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。&lt;/p&gt;
+        <description>&lt;p&gt;Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述Android APP逆向的基本过程。&lt;/p&gt;
 
 &lt;h2 id=&quot;静态分析&quot;&gt;静态分析&lt;/h2&gt;
 
@@ -755,7 +940,7 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
 
 &lt;ul&gt;
   &lt;li&gt;&lt;strong&gt;userdebug版&lt;/strong&gt;的Android手机。&lt;/li&gt;
-  &lt;li&gt;Android Stuido&lt;/li&gt;
+  &lt;li&gt;Android Stuido + &lt;a href=&quot;https://github.com/JesusFreke/smali/wiki/smalidea&quot;&gt;smalidea插件&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;为什么是userdebug版的？因为userdebug版的系统，所有的应用都是debuggable的，这样就可以通过Android Studio开启调试给应用打断点调试。网上也有其他手段，比如：&lt;/p&gt;
@@ -770,7 +955,7 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
 &lt;h3 id=&quot;打开项目&quot;&gt;打开项目&lt;/h3&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;打开Android Studio&lt;/li&gt;
+  &lt;li&gt;打开Android Studio(确认安装好smalidea插件)&lt;/li&gt;
   &lt;li&gt;File –&amp;gt; Open –&amp;gt; 选择静态分析中反编译的smali源码目录 &lt;code class=&quot;highlighter-rouge&quot;&gt;QQMusic72282\&lt;/code&gt;&lt;/li&gt;
   &lt;li&gt;Mark smali及所有smali_classesx为 &lt;code class=&quot;highlighter-rouge&quot;&gt;Sources Root&lt;/code&gt;
 &lt;img src=&quot;./assets/rve-android/as-setup-src.png&quot; alt=&quot;as setup src&quot; /&gt;&lt;/li&gt;
@@ -798,7 +983,7 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
 
 &lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
 
-&lt;p&gt;&lt;strong&gt;本人入坑逆向也没有多久，文章重点探讨入门的一些基本要点，如有大佬翻牌，还望多指点。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;在写这片文章时，本人入坑逆向也没有多久，作为小白，文章重点探讨小白入门的一些基本要点，如有大佬翻牌，还望多指点。&lt;/strong&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;本文仅作为学习交流，请勿用作非法用途。&lt;/strong&gt;&lt;/p&gt;
 
@@ -848,6 +1033,7 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
   &lt;li&gt;静态分析&lt;/li&gt;
   &lt;li&gt;动态分析&lt;/li&gt;
   &lt;li&gt;网络流量分析&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;猜&lt;/strong&gt;【你没有看错】&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;p&gt;在做逆向的时候，通常需要根据需要被分析的程序特点，选择一种或者多种手段结合使用，来达到最佳效果。&lt;/p&gt;
@@ -864,14 +1050,20 @@ jar &lt;span class=&quot;nt&quot;&gt;-cvf&lt;/span&gt; classes-combined.jar &lt;
 
 &lt;p&gt;通过代理方式或者其他方式，截取程序与服务器通信的数据流量（抓包），来分析客户端和服务端的通信协议。网络流量分析比较有局限性，若客户端使用&lt;em&gt;Http&lt;/em&gt;这种明文传输的协议，会比较容易分析；但如果客户端使用SSL、&lt;em&gt;Https&lt;/em&gt;等加密传输协议与服务端进行通信，那么抓包的前提是需要拿到服务端下发给客户端的证书才能进一步解密分析，这种情况下就比较棘手。网上有方案通过安装插件拿到Chrome或者Firefox浏览器的本地证书，但只适用于客户端是网页的情况。若其他大佬有好的宝贵经验，还望能指点迷津。&lt;/p&gt;
 
+&lt;h3 id=&quot;猜&quot;&gt;猜&lt;/h3&gt;
+
+&lt;p&gt;正如上文所提到的分析汇编代码，往往不需要所有代码都逐行逐句都分析，其实不仅仅是分析汇编，我们在逆向分析所有代码（汇编、smali、C伪代码）时，以上三种分析手段往往只用在分析一些关键的、主干思路代码。很多时候，一些不重要的、通用写法的代码，就需要凭借自己点编程经验猜测了，提高逆向分析效率。&lt;/p&gt;
+
+&lt;p&gt;而&lt;strong&gt;猜测&lt;/strong&gt;的前提是，你需要有一定的编程经验，能够在逆向分析出一些代码后，对其上下的代码进行合理的推测，推测不出来的代码再通过以上手段分析。可以这么说，你的推测能力决定了你的逆向分析效率，而编程经验则是你猜测能力的基石。&lt;/p&gt;
+
 &lt;hr /&gt;
 
 &lt;h2 id=&quot;详细章节&quot;&gt;详细章节&lt;/h2&gt;
 
 &lt;ul&gt;
   &lt;li&gt;&lt;a href=&quot;reverse-engineering-android&quot;&gt;Java语言的逆向(Android APP)&lt;/a&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;reverse-engineering-asm&quot;&gt;汇编语言简述&lt;/a&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;reverse-engineering-oc&quot;&gt;Objective-C语言的逆向&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;reverse-engineering-asm&quot;&gt;汇编语言简述(逆向工程)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;reverse-engineering-oc&quot;&gt;Objective-C语言的逆向(Mac OS)&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;reverse-engineering-c_cxx&quot;&gt;C/C++二进制逆向&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 </description>

@@ -21,7 +21,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-01-28T00:00:00+08:00" />
 <script type="application/ld+json">
-{"mainEntityOfPage":{"@type":"WebPage","@id":"/blog/reverse-engineering-android"},"@type":"BlogPosting","url":"/blog/reverse-engineering-android","headline":"Java语言的逆向(Android APP)","dateModified":"2020-01-28T00:00:00+08:00","datePublished":"2020-01-28T00:00:00+08:00","author":{"@type":"Person","name":"Coder Jay"},"description":"Java语言逆向(Android APP)的入门技巧","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","headline":"Java语言的逆向(Android APP)","dateModified":"2020-01-28T00:00:00+08:00","datePublished":"2020-01-28T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/blog/reverse-engineering-android"},"url":"/blog/reverse-engineering-android","author":{"@type":"Person","name":"Coder Jay"},"description":"Java语言逆向(Android APP)的入门技巧","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 </head>
@@ -46,7 +46,7 @@
         <article>
   <h2>Java语言的逆向(Android APP)</h2>
   <time datetime="2020-01-28T00:00:00+08:00" class="by-line">28 Jan 2020</time>
-  <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述逆向的基本过程。</p>
+  <p>Java语言的逆向比较简单，只说一些关键思路和小技巧。下面以QQ音乐为例，讲述Android APP逆向的基本过程。</p>
 
 <h2 id="静态分析">静态分析</h2>
 
@@ -102,7 +102,7 @@ jar <span class="nt">-cvf</span> classes-combined.jar <span class="nt">-C</span>
 
 <ul>
   <li><strong>userdebug版</strong>的Android手机。</li>
-  <li>Android Stuido</li>
+  <li>Android Stuido + <a href="https://github.com/JesusFreke/smali/wiki/smalidea">smalidea插件</a></li>
 </ul>
 
 <p>为什么是userdebug版的？因为userdebug版的系统，所有的应用都是debuggable的，这样就可以通过Android Studio开启调试给应用打断点调试。网上也有其他手段，比如：</p>
@@ -117,7 +117,7 @@ jar <span class="nt">-cvf</span> classes-combined.jar <span class="nt">-C</span>
 <h3 id="打开项目">打开项目</h3>
 
 <ul>
-  <li>打开Android Studio</li>
+  <li>打开Android Studio(确认安装好smalidea插件)</li>
   <li>File –&gt; Open –&gt; 选择静态分析中反编译的smali源码目录 <code class="highlighter-rouge">QQMusic72282\</code></li>
   <li>Mark smali及所有smali_classesx为 <code class="highlighter-rouge">Sources Root</code>
 <img src="./assets/rve-android/as-setup-src.png" alt="as setup src" /></li>
