@@ -54,11 +54,11 @@
 
 <p>首先打开IDA64.app（Mac版的QQ音乐是64位版本，所以这里使用的是IDA64），点击菜单File –&gt; Open，找到QQ音乐所在目录选中：
 <img src="./assets/rve-oc/ida-open-app.png" alt="open App" />
-可以看到，QQ音乐.app其实只是一个特殊的文件夹，依次选择Contents –&gt; MacOs –&gt; QQMusic(可执行二进制文件)，并点击Open打开QQMusic。打开后IDA会解析二进制文件，解析过程比较长，需耐心等待（解析完成后可以Ctrl+S保存解析结果，保存为后缀<code class="highlighter-rouge">.ida</code>的文件，下次可以直接用IDA打开）。
+可以看到，QQ音乐.app并不是一个文件，而是一个特殊的文件夹，依次选择Contents –&gt; MacOs –&gt; QQMusic(可执行二进制文件)，并点击Open打开QQMusic。打开后IDA会解析二进制文件，解析过程比较长，需耐心等待（解析完成后可以Ctrl+S保存解析结果，保存为后缀<code class="highlighter-rouge">.ida</code>的文件，下次可以直接用IDA打开）。
 <img src="./assets/rve-oc/ida-qq-music-main.png" alt="QQMusic main" />
 IDA左边Function Window列出了解析出来的的所有函数列表，需要注意的是，OC反编译出来后，并没有以<code class="highlighter-rouge">类</code>来划分函数，因为所有的类都被打包在同一个文件里，但是IDA反编译的函数是以<code class="highlighter-rouge">-[类名 函数名]</code>这样的规律来命名。</p>
 
-<p>这里，我们可以看出，计算机并不知道什么是类、什么是面向对象，暂且可以这样说，对于计算机只有一段段的可执行代码 – 即函数。（这里只说暂且，等后续深入研究汇编代码时就会发现，计算机其实也不认识函数O_o）</p>
+<p>这里，我们可以看出，计算机并不知道什么是类、什么是面向对象，暂且可以这样说，对于计算机而言只有<strong>一段段</strong>的可执行代码 – 即函数。（这里说是「暂且」，是因为我们后续深入研究汇编代码时就会发现，计算机其实也不认识函数O_o，计算机只认识<strong>一句句</strong>可执行指令。函数、类只是方便人们组织代码的架构，所创造的代码规范，而这个规范的很多工作是编译器自动为我们完成的）</p>
 
 <p>然后我选择<code class="highlighter-rouge">_main</code>函数，并双击打开，就是左边的汇编代码内容了，可能小白（包括我）第一次看到这个代码会有点懵。不要怕，问题不大～，我们输入<code class="highlighter-rouge">F5</code>，强大的IDA就会为我们生产C的伪代码：
 <img src="./assets/rve-oc/ida-qq-music-main-c.png" alt="QQMusic main C" />
@@ -66,9 +66,11 @@ IDA左边Function Window列出了解析出来的的所有函数列表，需要�
 
 <p>熟悉OC的朋友看到NSApplicationMain这个函数应该很清楚，这里其实就是OC框架下的程序入口。但是传入的参数可能会让人疑惑，我们可以和汇编代码比较起来看，然后就会明白，这只是IDA翻译成伪代码时的优化问题，<code class="highlighter-rouge">v3</code>、<code class="highlighter-rouge">v4</code>其实就是参数<code class="highlighter-rouge">argc</code>、<code class="highlighter-rouge">argv</code>。所以伪代码在逆向分析中仅供参考，用于快速的分析代码流程逻辑非常有帮助，但是到实际的调试阶段，还是需要以汇编代码为准。</p>
 
-<p>滑动函数列表，我们可以看到QQ音乐代码中所有的函数，通过函数名称可以看出程序中类的划分、命名等。通过这些信息可以大致猜到这些类大概是干嘛用的。比如<code class="highlighter-rouge">QQMusicMainPlayerController</code> 这个类应该是QQ音乐主播放器View（MVC结构）对应的Controller，类里的函数包括了一系列的UI事件处理，如收藏歌曲、下载事件处理、显示歌手详情等（都是根据函数名盲猜的）。
-<img src="./assets/rve-oc/ida-qq-music-fun-list.png" alt="QQMusic function list" />
-图中展示了<code class="highlighter-rouge">QQMusicMainPlayerController downloadClickActionAtRow</code>这个函数的代码内容，代码中可以看到很多<code class="highlighter-rouge">_objc_msgSend</code>、<code class="highlighter-rouge">objc_retainAutoreleasedReturnValue</code>、<code class="highlighter-rouge">objc_storeStrong</code>等函数调用，这其实是OC的消息机制导致的。在OC中，所有的函数调用都被转换成给这个对象发消息(即 <code class="highlighter-rouge">_objc_msgSend</code>)，而 <code class="highlighter-rouge">objc_storeStrong</code>、<code class="highlighter-rouge">objc_retainAutoreleasedReturnValue</code>则是OC内存回收机制相关的函数调用，这些函数都是编译器在编译代码时自动生成的代码，感兴趣可以自行深入了解一下OC的消息机制和几种内存回收原理。</p>
+<p>滑动函数列表，我们可以看到QQ音乐代码中所有的函数，通过函数名称可以看出程序中类的划分、命名等。通过这些信息可以大致猜到这些类大概是干嘛用的。比如<code class="highlighter-rouge">QQMusicMainPlayerController</code> 这个类应该是QQ音乐主播放器View（MVC结构）对应的Controller，类里的函数包括了一系列的UI事件处理，如收藏歌曲、下载事件处理、显示歌手详情等（不要问我怎么知道的～我也都是盲猜的）。</p>
+
+<p><img src="./assets/rve-oc/ida-qq-music-fun-list.png" alt="QQMusic function list" /></p>
+
+<p>图中展示了<code class="highlighter-rouge">QQMusicMainPlayerController downloadClickActionAtRow</code>这个函数的代码内容，代码中可以看到很多<code class="highlighter-rouge">_objc_msgSend</code>、<code class="highlighter-rouge">objc_retainAutoreleasedReturnValue</code>、<code class="highlighter-rouge">objc_storeStrong</code>等函数调用，这其实是OC的消息机制导致的。在OC中，所有的函数调用都被转换成给这个对象发消息(即 <code class="highlighter-rouge">_objc_msgSend</code>)，而 <code class="highlighter-rouge">objc_storeStrong</code>、<code class="highlighter-rouge">objc_retainAutoreleasedReturnValue</code>则是OC内存回收机制相关的函数调用。这些函数都是编译器在编译代码时自动生成的代码，感兴趣可以自行深入了解一下OC的消息机制和几种内存回收原理。</p>
 
 <p>简单分析(盲猜)一下代码的大致流程：</p>
 
@@ -134,21 +136,21 @@ IDA左边Function Window列出了解析出来的的所有函数列表，需要�
   <li>调用 <code class="highlighter-rouge">v11</code> 的 <code class="highlighter-rouge">showMenuWithEvent</code>函数，并传入 <code class="highlighter-rouge">v12</code>显示下载菜单</li>
 </ol>
 
-<p>可以看到，以上的代码逻辑都是根据现有伪代码信息猜的。可能你会疑惑，都是怎么猜出来的，正如我在<a href="reverse-engineering-summary">逆向工程入门简述</a>中提到的，猜逻辑的前提是具有一定的编程经验。可以说编程经验越丰富，猜的速度和猜中的几率也就更快更大。</p>
+<p>可以看到，以上的代码逻辑都是根据现有伪代码信息猜的。可能你会疑惑，这么玄学吗？？你都是怎么猜出来的。没错，都是凭直觉猜的… 正如我在<a href="reverse-engineering-summary">逆向工程入门简述</a>中提到的，猜逻辑的前提是具有一定的编程经验。可以说编程经验越丰富，猜的速度和猜中的几率也就更快更大。</p>
 
 <h2 id="动态分析">动态分析</h2>
 
 <p>前面介绍了如使用IDA静态分析OC程序，接下来说一下如何使用Hopper Disassembler动态调试OC程序。</p>
 
-<p>首先同样的用Hopper Disassembler打开QQ音乐APP，直接将QQ音乐.app拖入Hopper Disassembler即可。和IDA一样，新打开的app文件需要解析，这个过程比较耗时，需要耐心等待，解析完成后Ctrl+S另存文件，保存解析后的数据。解析完成后可以看到，左边窗口同样是函数列表，右边窗口展示代码，顶部Tab可以切换汇编代码/视图/伪代码/16进制模式。</p>
+<p>首先同样的用Hopper Disassembler打开QQ音乐APP，直接将QQ音乐.app拖入Hopper Disassembler即可。和IDA一样，新打开的app文件需要解析，这个过程比较耗时，需要耐心等待(解析完成后Ctrl+S另存文件，保存解析后的数据）。解析完成后可以看到，左边窗口同样是函数列表，右边窗口展示代码，顶部Tab可以切换汇编代码/视图/伪代码/16进制模式。</p>
 
 <p><img src="./assets/rve-oc/hd-qq-music-main.png" alt="QQMusic main" /></p>
 
-<p>既然要动态调试代码，我们就找一些代码试试水，比如试着获取歌曲相关信息的下载地址。我们在函数列表区域搜索框中输入关键字 <code class="highlighter-rouge">download</code>，滚动结果，看看能搜到什么有用的信息</p>
+<p>既然要动态调试代码，我们就找一些代码试试水，比如试着获取歌曲相关信息的下载地址。我们在函数列表区域搜索框中输入关键字 <code class="highlighter-rouge">download</code>，滚动函数列表，看看能搜到什么有用的信息。</p>
 
 <p><img src="./assets/rve-oc/hd-qq-music-download-search.png" alt="hd download search" /></p>
 
-<p>看到<code class="highlighter-rouge">DownloadBasicInfo download_url</code>这个比较可疑，于是下断电，菜单点击Debug –&gt; Select Debugger</p>
+<p>看到<code class="highlighter-rouge">DownloadBasicInfo download_url</code>这个比较可疑，于是下断点开始调试，菜单点击Debug –&gt; Select Debugger</p>
 
 <p><img src="./assets/rve-oc/hd-debugger-menu.png" alt="hd debugger menu" /></p>
 
@@ -156,7 +158,7 @@ IDA左边Function Window列出了解析出来的的所有函数列表，需要�
 
 <p><img src="./assets/rve-oc/hd-local-debugger-dialog.png" alt="hd local debugger dialog" height="80%" width="80%" /></p>
 
-<p>运行QQ音乐.app，点击调试对话框中的Attach to Process，找到QQ音乐的进程，双击选中</p>
+<p>先运行QQ音乐.app，然后回到Hopper Disassembler点击调试对话框中的Attach to Process，找到QQ音乐的进程，双击选中</p>
 
 <p><img src="./assets/rve-oc/hd-debugger-select-process.png" alt="hd debugger select process" height="60%" width="60%" /></p>
 
