@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <meta name="generator" content="Jekyll">
+
+  <title>VS Code + Cmake Tools, 搭建C/C++跨平台（NDK、iOS）开发环境</title>
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  
+  <link href="/atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" /> <!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>VS Code + Cmake Tools, 搭建C/C++跨平台（NDK、iOS）开发环境 | Coder Jay’s Blog</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="VS Code + Cmake Tools, 搭建C/C++跨平台（NDK、iOS）开发环境" />
+<meta name="author" content="Coder Jay" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="最近公司新需求，要求用C/C++实现部分核心代码，打包成静态库跨平台（Android和iOS）使用。 作为Android开发出身的C/C++老白程序员兴奋不已（又可以开心的学习niubility的C/C++了），但之前写JNI代码的集成环境都是Android Studio，最后打包生成的so库也是面向Android平台的。 有什么IDE适合这种跨平台开发的呢？请教了公司写C的大牛（独立开发了一套跑在单片机上的Linux操作系统的非著名程序员，emacs发烧友），大牛说C/C++并没有什么特好用的IDE，用的人多的可能Eclipse算一个。 毕竟大神是emacs党，还需要IDE？ 可我一VIM党，也用emacs开发C/C++？ Sorry, I Can’t Do It。" />
+<meta property="og:description" content="最近公司新需求，要求用C/C++实现部分核心代码，打包成静态库跨平台（Android和iOS）使用。 作为Android开发出身的C/C++老白程序员兴奋不已（又可以开心的学习niubility的C/C++了），但之前写JNI代码的集成环境都是Android Studio，最后打包生成的so库也是面向Android平台的。 有什么IDE适合这种跨平台开发的呢？请教了公司写C的大牛（独立开发了一套跑在单片机上的Linux操作系统的非著名程序员，emacs发烧友），大牛说C/C++并没有什么特好用的IDE，用的人多的可能Eclipse算一个。 毕竟大神是emacs党，还需要IDE？ 可我一VIM党，也用emacs开发C/C++？ Sorry, I Can’t Do It。" />
+<meta property="og:site_name" content="Coder Jay’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-07-05T00:00:00+08:00" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"VS Code + Cmake Tools, 搭建C/C++跨平台（NDK、iOS）开发环境","dateModified":"2020-07-05T00:00:00+08:00","datePublished":"2020-07-05T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/blog/vscode-cmake-cross-compile"},"url":"/blog/vscode-cmake-cross-compile","author":{"@type":"Person","name":"Coder Jay"},"description":"最近公司新需求，要求用C/C++实现部分核心代码，打包成静态库跨平台（Android和iOS）使用。 作为Android开发出身的C/C++老白程序员兴奋不已（又可以开心的学习niubility的C/C++了），但之前写JNI代码的集成环境都是Android Studio，最后打包生成的so库也是面向Android平台的。 有什么IDE适合这种跨平台开发的呢？请教了公司写C的大牛（独立开发了一套跑在单片机上的Linux操作系统的非著名程序员，emacs发烧友），大牛说C/C++并没有什么特好用的IDE，用的人多的可能Eclipse算一个。 毕竟大神是emacs党，还需要IDE？ 可我一VIM党，也用emacs开发C/C++？ Sorry, I Can’t Do It。","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+<body>
+  <div id="wrapper">
+    <header>
+  <div>
+    <a href="/blog/">
+    
+    <h1>coder-jay@home:~$</h1>
+    </a>
+    <div class="header-links">
+      <a href="/blog/archive"><h2 class="header-link">Archive</h2></a>
+<a href="/blog/about"><h2 class="header-link">About</h2></a>
+<a href="/blog/atom.xml"><h2 class="header-link">RSS</h2></a>
+    </div>
+  </div>
+</header>
+    <div class="container">
+      <section id="main_content">
+        <article>
+  <h2>VS Code + Cmake Tools, 搭建C/C++跨平台（NDK、iOS）开发环境</h2>
+  <time datetime="2020-07-05T00:00:00+08:00" class="by-line">05 Jul 2020</time>
+  <p>最近公司新需求，要求用C/C++实现部分核心代码，打包成静态库跨平台（Android和iOS）使用。 作为Android开发出身的C/C++老白程序员兴奋不已（又可以开心的学习niubility的C/C++了），但之前写JNI代码的集成环境都是Android Studio，最后打包生成的so库也是面向Android平台的。 有什么IDE适合这种跨平台开发的呢？请教了公司写C的大牛（独立开发了一套跑在单片机上的Linux操作系统的非著名程序员，emacs发烧友），大牛说C/C++并没有什么特好用的IDE，用的人多的可能Eclipse算一个。 毕竟大神是emacs党，还需要IDE？ 可我一VIM党，也用emacs开发C/C++？ <strong>Sorry, I Can’t Do It</strong>。</p>
+
+<p>于是我就琢磨有啥其他选项，想着要不试试VS Code，这家伙近些年混得风生水起的。然后，经过一番摸索后总算弄了一套C/C++ + Cmake的环境，分析给各位大佬们，有啥建议还请多赐教。</p>
+
+<h2 id="插件安装">插件安装</h2>
+
+<p>用VS Code搭建开发环境，插件是必不可少的。</p>
+
+<h3 id="vs-code对cc的支持">VS Code对C/C++的支持</h3>
+
+<p>这里我选择了<a href="https://github.com/microsoft/vscode-cpptools">C/C++插件</a>，官方提供的，应该值得信赖。</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-plugin-cxx.png" alt="C/C++ plugin" /></p>
+
+<h3 id="cmake支持">Cmake支持</h3>
+
+<p>编译工具这里我选择了cmake，所以安装<a href="https://github.com/twxs/vs.language.cmake">Cmake</a>和<a href="https://github.com/microsoft/vscode-cmake-tools">Cmake Tools</a>这两个插件。</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-plugin-cmake.png" alt="Cmake plugin" /></p>
+
+<p>Cmake插件是让VS Code支持Cmake语言。</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-plugin-cmake-tools.png" alt="Cmake Tools plugin" /></p>
+
+<p>而Cmake Tools插件则是能让VS提供各种Cmake编译相关的小工具，包括在底部状态栏显示一些快捷工具。</p>
+
+<p>安装上述三个插件后，重启VS Code让插件生效。</p>
+
+<h2 id="环境配置">环境配置</h2>
+
+<p>首先随便创建一个目录，作为项目根目录，以Android的NDK配置为例。</p>
+
+<h3 id="配置vs-code的cc工具链">配置VS Code的C/C++工具链</h3>
+
+<p><code class="highlighter-rouge">Cmd</code> + <code class="highlighter-rouge">Shfit</code> + <code class="highlighter-rouge">P</code>，输入<code class="highlighter-rouge">edit configuration</code>：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-search_c_cpp.png" alt="cpp configuration search" /></p>
+
+<p>编辑<code class="highlighter-rouge">c_cpp_properties.json</code>配置文件：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-c_cpp_properties.png" alt="cpp configuration" /></p>
+
+<p>这里我添加了Android配置：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Android"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"includePath"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"${workspaceFolder}/src"</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nl">"defines"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nl">"compilerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${env:ANDROID_NDK}/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"cStandard"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c11"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"cppStandard"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c++17"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"intelliSenseMode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clang-x64"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"configurationProvider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ms-vscode.cmake-tools"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>这里解释一下这几个重要配置项的作用：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">name</code>：配置名称，会显示在状态栏上。</li>
+  <li><code class="highlighter-rouge">includePath</code>：VS Code搜索include头文件的路径(后面会被Cmake tools取代)。</li>
+  <li><code class="highlighter-rouge">compilerPath</code>：编译器路径，这里我选择的llvm的clang。这也是目前NDK官方指定的，其他编译器都被Google删掉了…</li>
+  <li><code class="highlighter-rouge">configurationProvider</code>：这个配置是告诉VS code，让Cmake Tools插件根据CMakeLists.txt的配置来指定C/C++的代码环境，如在CMakeLists.txt中配置了 <code class="highlighter-rouge">link_directories(dir_xx)</code>命令，VS Code就能正确识别出 <code class="highlighter-rouge">#Include&lt;dir_xx/xxx.h&gt;</code>头文件。同时也就取代了上面的 <code class="highlighter-rouge">includePath</code>配置。</li>
+</ul>
+
+<p>添加上面的配置后，状态栏左下角就可以选择Android这个编译环境配置了：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-c_cpp_statusbar.png" alt="cpp configuration status bar" /></p>
+
+<h3 id="cmake-tools配置">Cmake Tools配置</h3>
+
+<h4 id="使用cmake-tools启动调试">使用CMake Tools启动调试</h4>
+
+<p>菜单依次选择Run –&gt; Add Configuration ：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-launch-menu.png" alt="vs launch config menu" height="30%" width="30%" /></p>
+
+<p>添加启动配置：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-launch.png" alt="vs launch config" height="70%" width="70%" /></p>
+
+<p>修改点：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">program</code>：启动的二进制程序路径</li>
+  <li><code class="highlighter-rouge">environment</code>：启动时的环境变量配置</li>
+</ul>
+
+<p>完成以上配置后，编写C/C++和CMakeLists.txt代码，就可以<code class="highlighter-rouge">Cmd</code> + <code class="highlighter-rouge">Shfit</code> + <code class="highlighter-rouge">P</code>依次执行Cmake Configure、Cmake Build、编译出C/C++的执行文件，然后<code class="highlighter-rouge">Shift</code> + <code class="highlighter-rouge">F7</code>选择执行目标运行程序，或者在VS code编辑器上加断点，<code class="highlighter-rouge">Ctrl</code> + <code class="highlighter-rouge">F5</code> 调试C/C++代码了。</p>
+
+<p>但这是常规的C/C++项目的套路。可我们需要使用NDK交叉编译，于是我们还需要继续添加如下配置：</p>
+
+<h4 id="配置cmake-tools的工具包">配置Cmake Tools的工具包</h4>
+
+<p><code class="highlighter-rouge">Cmd</code> + <code class="highlighter-rouge">Shfit</code> + <code class="highlighter-rouge">P</code>，输入<code class="highlighter-rouge">cmake edit user-local cmake kits</code>：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-search-cmake-kits.png" alt="cmake tools kits search" height="60%" width="60%" /></p>
+
+<p>默认情况下，VS code会生成如下配置项：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-cmake-kits.png" alt="cmake tools kits" height="80%" width="80%" /></p>
+
+<p>添加自定义的Cmake kits：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clang Android"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"compilers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"C"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/jay/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"CXX"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/jay/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nl">"environmentVariables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"ANDROID_NDK"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/jay/Library/Android/sdk/ndk-bundle"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nl">"toolchainFile"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${env:ANDROID_NDK}/build/cmake/android.toolchain.cmake"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"cmakeSettings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"CMAKE_INSTALL_PREFIX"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${workspaceFolder}/out/android/${variant:buildType}/${variant:abi}"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"ANDROID_TOOLCHAIN"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clang"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"ANDROID_NATIVE_API_LEVEL"</span><span class="p">:</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"ANDROID_STL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c++_shared"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"ANDROID_ABI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"armeabi-v7a"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"ANDROID_CPP_FEATURES"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rtti exceptions"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>配置参数的意思基本上看名字就能猜出来是什么意思，需要单独解释的是cmakeSettings这个参数，这里面配置的参数会在执行cmake命令时以“-Dname=val”的形式传入参数（如”ANDROID_ABI”: “armeabi-v7a”在编译时，则会变成“-DANDROID_ABI=armeabi-v7a”传入），所以这里我们可以自定义合适的参数传入Cmake用于构建。配置完成后，可在状态栏选择我们的“Clang Android” Kits配置。</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-cmake-kits-statusbar.png" alt="cmake tools kits status bar" /></p>
+
+<p>但是大家都知道，在写JNI代码时，往往需要针对不同的CPU架构编译不同的so库，难道需要每次修改这里的配置参数吗？当然有更优秀的方法！是时候向大家介绍<a href="https://vector-of-bool.github.io/docs/vscode-cmake-tools/variants.html">CMake Variants</a>这个家伙了。</p>
+
+<h4 id="cmake-variants配置">CMake Variants配置</h4>
+
+<p>Cmake Tools的默认varant配置是这样的：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"debug"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The build type."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"choices"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"debug"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Debug"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Disable optimizations - include debug information."</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Debug"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nl">"release"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Release"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Optimize for speed - exclude debug information."</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Release"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nl">"minsize"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MinSizeRel"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Optimize for smallest binary size - exclude debug information."</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MinSizeRel"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nl">"reldeb"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RelWithDebInfo"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Optimize for speed - include debug information."</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RelWithDebInfo"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>默认为我们提供了几种打包配置，我们可以扩展一下，新建配置文件<code class="highlighter-rouge">projectName/.vscode/cmake-variant.json</code>，添加如下配置：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"debug"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The build type."</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"choices"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"debug"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Debug"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Disable optimizations - include debug information."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Debug"</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nl">"release"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Release"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Optimize for speed - exclude debug information."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"buildType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Release"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nl">"abi"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"armeabi-v7a"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"abi for android build"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"choices"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"armeabi-v7a"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"armv7"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"abi for armeabi-v7a"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"settings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nl">"ANDROID_ABI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"armeabi-v7a"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nl">"arm64-v8a"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arm64"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"abi for arm64-v8a"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"settings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nl">"ANDROID_ABI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"arm64-v8a"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">},</span><span class="w">
+      </span><span class="nl">"x86_64"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"short"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x86_64"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"long"</span><span class="p">:</span><span class="w"> </span><span class="s2">"abi for x86_64"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"settings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nl">"ANDROID_ABI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x86_64"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>我们在<code class="highlighter-rouge">settings</code>配置项中添加了ANDROID_ABI参数，作用和Cmake kits中的<code class="highlighter-rouge">cmakeSettings</code>是一样的，这样我们可以删掉cmake kits中的ANDROID_ABI参数配置了。参数的详细信息可以参考<a href="https://vector-of-bool.github.io/docs/vscode-cmake-tools/variants.html">CMake Variants</a>，配置完成后，可在状态栏选择variant：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-cmake-variant-statusbar.png" alt="cmake tools variant status bar" /></p>
+
+<p>点击variant选项，我们可以看到2 x 3 = 6种组合选项可供选择：</p>
+
+<p><img src="./assets/vscode-cxx-ide/vs-config-cmake-variant.png" alt="cmake tools variant config" width="60%" height="60%" /></p>
+
+<p>这样我们需要编译不同的CPU架构的so库时，选择不同的variant配置即可。</p>
+
+<p>至此，我们就可以愉快的跨平台开发C/C++代码了～</p>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://vector-of-bool.github.io/docs/vscode-cmake-tools/index.html">CMake Tools for Visual Studio Code</a></li>
+</ul>
+
+</article>
+      </section>
+    </div>
+  </div>
+
+   <footer>
+  <a href="https://creativecommons.org/licenses/by-nc/3.0/deed.en_US">
+    <span>
+        <b>Coder-Jay</b>
+    </span>
+    
+    <span>© 2020</span>
+  </a>
+</footer>
+
+  
+</body>
+
+</html>

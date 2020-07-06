@@ -17,6 +17,10 @@
 <lastmod>2020-01-28T00:00:00+08:00</lastmod>
 </url>
 <url>
+<loc>/blog/vscode-cmake-cross-compile</loc>
+<lastmod>2020-07-05T00:00:00+08:00</lastmod>
+</url>
+<url>
 <loc>/blog/404</loc>
 </url>
 <url>
@@ -27,5 +31,8 @@
 </url>
 <url>
 <loc>/blog/</loc>
+</url>
+<url>
+<loc>/blog/page/2/</loc>
 </url>
 </urlset>
